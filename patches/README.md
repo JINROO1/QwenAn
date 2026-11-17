@@ -21,13 +21,22 @@ No se aplican automáticamente: son el registro del cambio para llevarlo al fork
   - `tools.approvalMode` → `disallowed_key` (sin cambios).
 - Desde la Web Shell: `/output-style Concise` y `/collapse-on-resume` muestran el aviso de éxito.
 
+## 0002 — Filtro por mes en `/usage/dashboard`
+
+- Archivos: `packages/core/src/services/usage-dashboard-service.ts` (opción `month`, función `monthBounds`,
+  campo `month` en la respuesta) y `packages/cli/src/serve/routes/usage-stats.ts` (`?month=AAAA-MM`).
+- Base: `v0.28.0`. Sin cambios en el SDK: la Web Shell llama al endpoint directamente.
+- Comportamiento: `?month=2026-10` devuelve el resumen y la serie diaria de ese mes (hora local).
+  El heatmap no cambia. Un mes con formato incorrecto responde 400 `invalid_month`.
+- Lo usa `/monthly AAAA-MM` de la Web Shell.
+
 ### Estado de compilación
 
-- El parche se aplica limpiamente sobre `v0.28.0` (`git apply`, sin conflictos).
-- Verificación de sintaxis: el archivo modificado transpila con esbuild y la lista contiene ambas claves.
-- Compilación completa del monorepo: **no completada en este entorno**. `pnpm install --ignore-scripts` funciona,
-  pero `tsc --build` de `packages/core` se queda sin memoria (heap de 3 GB y 4 GB de RAM totales).
-  Hace falta un entorno con más memoria (p. ej. un runner de CI con 8 GB o más) para compilar el daemon.
+- Compilación completa del monorepo (`node scripts/build.js`) **correcta** con heap de 7 GB y un swap de 8 GB
+  añadido al entorno (la RAM física es de 4 GB; el swap es memoria virtual, más lenta).
+- El daemon compilado es `packages/cli/dist/index.js` (`qwen 0.28.0`). Probado: `general.outputStyle` → 200,
+  `ui.history.collapseOnResume` → 200, `tools.approvalMode` → 400 `disallowed_key`.
+- Con el parche 0002 se recompilan `core` y `cli` (ver resultado en el historial del proyecto).
 
 ### Pendiente
 

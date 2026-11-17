@@ -63,7 +63,7 @@ npx @qwen-code/qwen-code serve --port 4170 --hostname 127.0.0.1 \
 | Sesiones: renombrar, archivar, exportar (md), eliminar | Hecho | |
 | Archivos, uso, MCP, skills, herramientas, memoria, proveedores, ajustes, estado | Hecho | Ajustes: solo los que el daemon permite modificar |
 | `/rollback` | Hecho (sin probar en vivo) | Lista turnos con snapshot; vuelve con o sin archivos |
-| `/monthly [AAAA-MM]` | Parcial | Resumen del mes en curso y descarga CSV. Un mes concreto no está disponible: el daemon solo acepta hoy, 7 o 30 días (requiere parche en `/usage/dashboard`) |
+| `/monthly [AAAA-MM]` | Hecho | Resumen del mes en curso o de un mes anterior, con descarga CSV. Un mes concreto requiere el parche `0002` del daemon |
 | `/expand-now` | Hecho | Expande razonamiento y herramientas |
 | `/reload-plugins` | Hecho | Probado contra el daemon |
 | `/cd` | Parcial | Muestra el directorio; el daemon está vinculado a un único workspace |
@@ -78,6 +78,6 @@ Los tres comandos dependen del parche `patches/qwen-code/0001-web-shell-allow-ou
   El grueso viene del punto de entrada de `@qwen-code/web-shell/daemon-react-sdk`; los visores pesados
   ya son fragmentos diferidos. Reducirlo implica usar solo `@qwen-code/sdk/daemon` con hooks propios.
   El umbral de aviso de Vite está en 1800 kB, con el motivo en `vite.config.ts`.
-- `/monthly` solo permite el mes en curso: el endpoint `/usage/dashboard` acepta `today | week | month`.
+- `/monthly AAAA-MM` necesita el daemon con el parche `0002`; con un daemon sin parche verás el error del servidor.
 - Las pestañas Sesiones, Workspace y Ajustes se cargan al primer uso.
 - Los iconos del menú de Workspace son emojis: dependen de la fuente del sistema.
