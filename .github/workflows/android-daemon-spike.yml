@@ -78,7 +78,7 @@ jobs:
           docker run --rm --platform linux/arm64 \
             -v "$PWD/work/node:/opt/node:ro" \
             -v "$PWD/src:/src" \
-            -e TOKEN="$TOKEN" \
+            -e TOKEN="$TOKEN" -e CI=true \
             ubuntu:noble bash -c '
               # Los logs de Actions no son legibles desde fuera: todo diagnóstico sale como anotación.
               ann() { while IFS= read -r l; do echo "::$1::$l"; done; }
