@@ -15,6 +15,8 @@ export interface SlashCommand {
 }
 
 interface Props {
+  /** Crea la sesión del daemon si la vista todavía no tiene una (primer mensaje). */
+  ensureSession: () => Promise<void>;
   /** Comandos locales que dependen de la pantalla (nueva conversación, renombrar…). */
   commands: SlashCommand[];
   onSent?: () => void;
@@ -37,7 +39,7 @@ const MODE_HINTS: Record<string, string> = {
   yolo: 'Ejecuta todo sin pedir permiso',
 };
 
-export default function Composer({ commands, onSent, onError }: Props) {
+export default function Composer({ commands, ensureSession, onSent, onError }: Props) {
   const actions = useActions();
   const streaming = useStreamingState();
   const { providers, current } = useProviders();
@@ -77,6 +79,7 @@ export default function Composer({ commands, onSent, onError }: Props) {
 
     setSending(true);
     try {
+      await ensureSession();
       if (text.startsWith('!') && attachments.length === 0) {
         await actions.sendShellCommand(text.slice(1).trim());
       } else {

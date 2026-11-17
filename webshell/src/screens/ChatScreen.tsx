@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DaemonSessionProvider,
   useActions,
@@ -56,6 +56,13 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
   const transcriptRef = useRef<HTMLDivElement>(null);
 
   const activeSessionId = connection.sessionId;
+
+  // El daemon no crea sesión hasta que se pide: la creamos en el primer envío.
+  const ensureSession = useCallback(async () => {
+    if (connection.sessionId) return;
+    await actions.createSession({ workspaceCwd: workspace.workspaceCwd });
+  }, [actions, connection.sessionId, workspace.workspaceCwd]);
+
   useEffect(() => {
     if (activeSessionId) onSessionCreated(activeSessionId);
   }, [activeSessionId, onSessionCreated]);
@@ -128,7 +135,7 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
           void (async () => {
             try {
               const ext = await workspaceActions.refreshExtensions();
-              await actions.refreshCommands();
+              if (connection.sessionId) await actions.refreshCommands();
               await workspaceActions.reloadMcp();
               report(`Extensiones recargadas: ${ext.refreshed} · fallidas: ${ext.failed}.`);
             } catch (err) {
@@ -161,7 +168,7 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
     }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actions, workspaceActions, workspace.workspaceCwd, onNewChat]);
+  }, [actions, workspaceActions, workspace.workspaceCwd, onNewChat, connection.sessionId]);
 
   return (
     <section className="chat">
@@ -225,6 +232,7 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
 
       <Composer
         commands={commands}
+        ensureSession={ensureSession}
         onError={(m) => {
           setInfo(null);
           setError(m);

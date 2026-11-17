@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import type { DaemonConfig } from './config';
 import ChatScreen from './screens/ChatScreen';
-import SessionsScreen from './screens/SessionsScreen';
-import WorkspaceScreen from './screens/WorkspaceScreen';
-import SettingsScreen from './screens/SettingsScreen';
+// Pantallas que no se abren al arrancar: se cargan al primer uso para reducir el bundle inicial.
+const SessionsScreen = lazy(() => import('./screens/SessionsScreen'));
+const WorkspaceScreen = lazy(() => import('./screens/WorkspaceScreen'));
+const SettingsScreen = lazy(() => import('./screens/SettingsScreen'));
 
 export type Tab = 'chat' | 'sessions' | 'workspace' | 'settings';
 
@@ -50,11 +51,19 @@ export default function Shell({ config, onEdit, onDisconnect }: Props) {
           />
         )}
         {tab === 'sessions' && (
-          <SessionsScreen activeSessionId={sessionId} onOpen={openSession} onNew={newChat} />
+          <Suspense fallback={<p className="tool-meta">Cargando…</p>}>
+            <SessionsScreen activeSessionId={sessionId} onOpen={openSession} onNew={newChat} />
+          </Suspense>
         )}
-        {tab === 'workspace' && <WorkspaceScreen />}
+        {tab === 'workspace' && (
+          <Suspense fallback={<p className="tool-meta">Cargando…</p>}>
+            <WorkspaceScreen />
+          </Suspense>
+        )}
         {tab === 'settings' && (
-          <SettingsScreen config={config} onEdit={onEdit} onDisconnect={onDisconnect} />
+          <Suspense fallback={<p className="tool-meta">Cargando…</p>}>
+            <SettingsScreen config={config} onEdit={onEdit} onDisconnect={onDisconnect} />
+          </Suspense>
         )}
       </main>
 
