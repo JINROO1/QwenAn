@@ -117,7 +117,15 @@ Workflow `.github/workflows/android-daemon-spike.yml`, ejecución `success` en l
 - Dentro de la distro: `arch=aarch64`, `node v26.13.1`, glibc 2.39.
 - `qwen serve` arranca. `GET /health` → 200, `POST /workspace/settings` (`general.outputStyle`) → 200, `GET /usage/dashboard?month=2026-10` → 200.
 
-Pendiente de este paso: **`--ignore-scripts` no compila los nativos**. Falta validar `sharp` y `@lydell/node-pty` con `pnpm rebuild` en arm64, y el sandbox (bwrap/Landlock) dentro de proot.
+Nativos (misma ejecución, `.github/spike/native.cjs`), con `--ignore-scripts` y los binarios precompilados por plataforma:
+
+- `@lydell/node-pty` → abre una terminal real y devuelve `pty-ok`. Funciona.
+- `sharp` → genera un PNG de 97 bytes. Funciona.
+- No hizo falta `pnpm rebuild`: ambos usan paquetes `linux-arm64` precompilados.
+
+Sandbox: en el runner `unshare -U` falla y no hay `bwrap`. Confirma que en proot hay que desactivar el sandbox del kernel y apoyarse en las reglas de permisos, como indica el plan.
+
+Pendiente: el sandbox real dentro de proot en un dispositivo, y el envío de prompts con modelo.
 
 Notas de CI: Node 26 no trae `corepack`; el montaje de Node es de solo lectura; pnpm necesita `CI=true` para reinstalar sin TTY. Los logs no son legibles desde el sandbox: todo diagnóstico se emite como anotaciones.
 
