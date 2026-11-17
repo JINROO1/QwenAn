@@ -23,21 +23,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Install emulation tooling
-        run: |
-          mkdir -p diag
-          sudo apt-get update > diag/apt-update.log 2>&1; echo "update rc=$?" >> diag/apt-update.log
-          sudo apt-get install -y qemu-user-static curl xz-utils > diag/apt-install.log 2>&1; echo "install rc=$?" >> diag/apt-install.log
-          ls -la /usr/bin/qemu-aarch64-static >> diag/apt-install.log 2>&1 || true
-          cat diag/apt-install.log | tail -5 || true
+      - name: Step A apt-get update
+        run: sudo apt-get update
 
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: spike-diag
-          path: diag/
-          if-no-files-found: ignore
+      - name: Step B install qemu-user-static
+        run: sudo apt-get install -y qemu-user-static
+
+      - name: Step C install curl xz-utils
+        run: sudo apt-get install -y curl xz-utils
 
       - name: Download and verify Ubuntu base (arm64)
         run: |
