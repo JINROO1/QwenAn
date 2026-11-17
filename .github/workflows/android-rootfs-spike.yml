@@ -48,7 +48,7 @@ jobs:
         run: |
           set +e
           docker run --rm --platform linux/arm64 -v "$PWD/work/node:/opt/node:ro" \
-            ubuntu:noble sh -c 'echo "rc-probe"; file /opt/node/bin/node 2>/dev/null; ls -l /opt/node/bin; /opt/node/bin/node -v' > c3.out 2>&1
+            ubuntu:noble sh -c 'apt-get update -qq && apt-get install -y -qq libatomic1 >/dev/null 2>&1; /opt/node/bin/node -v && /opt/node/bin/node -e "console.log(\"arch=\" + process.arch + \" v8=\" + process.versions.v8 + \" glibc-ok\")" && apt-get update -qq && apt-cache policy git python3 | head -8' > c3.out 2>&1
           rc=$?
           python3 -c "import sys,json; t=open('c3.out').read(); print('::error title=C3 rc=$rc::'+t.replace('%','%25').replace('\n','%0A').replace('\r',''))"
           exit $rc
