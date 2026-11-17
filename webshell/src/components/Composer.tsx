@@ -244,7 +244,7 @@ export default function Composer({ commands, onSent, onError }: Props) {
           className="composer-input"
           rows={1}
           value={draft}
-          placeholder="Escribe una instrucción, / para comandos o ! para shell…"
+          placeholder="Escribe un mensaje…"
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
         />
