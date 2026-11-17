@@ -46,8 +46,12 @@ jobs:
 
       - name: C3 node -v (mounted linux-arm64 Node 26.13.1)
         run: |
+          set +e
           docker run --rm --platform linux/arm64 -v "$PWD/work/node:/opt/node:ro" \
-            ubuntu:noble /opt/node/bin/node -v
+            ubuntu:noble sh -c 'echo "rc-probe"; file /opt/node/bin/node 2>/dev/null; ls -l /opt/node/bin; /opt/node/bin/node -v' > c3.out 2>&1
+          rc=$?
+          python3 -c "import sys,json; t=open('c3.out').read(); print('::error title=C3 rc=$rc::'+t.replace('%','%25').replace('\n','%0A').replace('\r',''))"
+          exit $rc
 
       - name: C4 node runtime check
         run: |
