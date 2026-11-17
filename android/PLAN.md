@@ -108,9 +108,22 @@ Workflow `.github/workflows/android-rootfs-spike.yml`, ejecución `success` en l
 
 Limitación del entorno de desarrollo: los logs y artefactos de Actions no son accesibles desde el sandbox (blobs fuera de la lista permitida). Para depurar se usan **anotaciones** (`::error::`), legibles por `api.github.com`.
 
+## Estado: qwen serve dentro de la distro arm64 (verificado en CI)
+
+Workflow `.github/workflows/android-daemon-spike.yml`, ejecución `success` en la rama:
+
+- Daemon compilado en amd64 desde `v0.28.0` con los parches `0001` y `0002` aplicados.
+- Dependencias instaladas en `ubuntu:noble` `linux/arm64` con `pnpm install --frozen-lockfile --ignore-scripts`.
+- Dentro de la distro: `arch=aarch64`, `node v26.13.1`, glibc 2.39.
+- `qwen serve` arranca. `GET /health` → 200, `POST /workspace/settings` (`general.outputStyle`) → 200, `GET /usage/dashboard?month=2026-10` → 200.
+
+Pendiente de este paso: **`--ignore-scripts` no compila los nativos**. Falta validar `sharp` y `@lydell/node-pty` con `pnpm rebuild` en arm64, y el sandbox (bwrap/Landlock) dentro de proot.
+
+Notas de CI: Node 26 no trae `corepack`; el montaje de Node es de solo lectura; pnpm necesita `CI=true` para reinstalar sin TTY. Los logs no son legibles desde el sandbox: todo diagnóstico se emite como anotaciones.
+
 ## Próximos pasos inmediatos
 
-1. Validar `qwen serve` dentro del mismo contenedor glibc: `npm ci` del bundle, `node dist/cli.js serve`, y una petición a `/health`.
+1. ~~Validar `qwen serve` dentro del mismo contenedor glibc~~ (hecho, ver arriba). Siguiente: nativos (`pnpm rebuild sharp @lydell/node-pty`) en arm64.
 2. Aplicar la lista de modificaciones (sandbox, nativos, rutas) como parches sobre un commit fijo de `QwenLM/qwen-code`.
 3. Completar la matriz de paridad y, con ella, implementar en el Web Shell las funciones que falten.
 4. Diseño mobile-first vertical con safe-area insets, sin solapamiento con la barra de navegación del sistema.
