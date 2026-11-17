@@ -1,0 +1,108 @@
+name: android-daemon-spike
+
+# Paso 1 del plan Android: ¿arranca `qwen serve` (con los parches 0001 y 0002)
+# dentro de una distro glibc arm64 con Node 26.13.1? Se compila en amd64 y se
+# ejecuta en ubuntu:noble linux/arm64 (binfmt). No publica nada.
+# Resultados: anotaciones ::notice:: / ::error:: (los logs no son accesibles).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/e2e27cb5-qwenan]
+    paths:
+      - '.github/workflows/android-daemon-spike.yml'
+      - 'patches/qwen-code/**'
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '26.13.1'
+  QWEN_CODE_TAG: 'v0.28.0'
+
+jobs:
+  daemon-arm64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Register arm64 emulation (binfmt)
+        run: docker run --privileged --rm tonistiigi/binfmt --install arm64
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Clone qwen-code ${{ env.QWEN_CODE_TAG }} and apply patches
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "$QWEN_CODE_TAG" https://github.com/QwenLM/qwen-code.git src
+          cd src
+          for p in "$GITHUB_WORKSPACE"/patches/qwen-code/*.patch; do
+            echo "::notice::applying $(basename "$p")"
+            git apply --check "$p" || { echo "::error::patch does not apply: $(basename "$p")"; exit 1; }
+            git apply "$p"
+          done
+          git status --short
+
+      - name: Build daemon (amd64 host)
+        working-directory: src
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          set -euo pipefail
+          npm i -g corepack@latest >/dev/null 2>&1 || true
+          corepack enable
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm run build || node scripts/build.js
+          node packages/cli/dist/index.js --version
+
+      - name: Fetch Node ${{ env.NODE_VERSION }} linux-arm64 (verified)
+        run: |
+          set -euo pipefail
+          mkdir -p work && cd work
+          BASE=https://nodejs.org/dist/v${NODE_VERSION}
+          curl -fsSLO "$BASE/SHASUMS256.txt"
+          NODE_TAR=node-v${NODE_VERSION}-linux-arm64.tar.xz
+          curl -fsSLO "$BASE/$NODE_TAR"
+          grep " $NODE_TAR\$" SHASUMS256.txt > node.sha256
+          sha256sum -c node.sha256
+          tar -xJf "$NODE_TAR"
+          mv "node-v${NODE_VERSION}-linux-arm64" node
+
+      - name: Run qwen serve in ubuntu:noble arm64 and probe the API
+        run: |
+          set -euo pipefail
+          TOKEN=spike-token-$RANDOM
+          docker run --rm --platform linux/arm64 \
+            -v "$PWD/work/node:/opt/node:ro" \
+            -v "$PWD/src:/src" \
+            -e TOKEN="$TOKEN" \
+            ubuntu:noble bash -c '
+              set -uo pipefail
+              apt-get update -qq && apt-get install -y -qq libatomic1 ca-certificates >/dev/null
+              export PATH=/opt/node/bin:$PATH
+              uname -m; node -v
+              echo "::notice::glibc $(ldd --version | head -1)"
+              cd /src
+              npm i -g pnpm@11.24.0 >/dev/null 2>&1
+              if pnpm install --frozen-lockfile --ignore-scripts >/tmp/install.log 2>&1; then
+                echo "::notice::arm64 pnpm install (ignore-scripts) ok"
+              else
+                echo "::error::arm64 pnpm install failed"; tail -30 /tmp/install.log
+              fi
+              mkdir -p /tmp/ws && cd /tmp/ws
+              node /src/packages/cli/dist/index.js serve --port 4170 --hostname 127.0.0.1 --token "$TOKEN" --workspace /tmp/ws >/tmp/serve.log 2>&1 &
+              for i in $(seq 1 60); do curl -fs http://127.0.0.1:4170/health >/dev/null && break; sleep 2; done
+              H="Authorization: Bearer $TOKEN"
+              code=$(curl -s -o /tmp/health.json -w "%{http_code}" http://127.0.0.1:4170/health || true)
+              echo "::notice::GET /health -> $code"
+              code=$(curl -s -o /tmp/w.json -w "%{http_code}" -H "$H" -X POST -H "Content-Type: application/json" \
+                -d "{\"scope\":\"workspace\",\"key\":\"general.outputStyle\",\"value\":\"Concise\"}" http://127.0.0.1:4170/workspace/settings || true)
+              echo "::notice::POST general.outputStyle -> $code"
+              code=$(curl -s -o /dev/null -w "%{http_code}" -H "$H" http://127.0.0.1:4170/usage/dashboard?month=2026-10 || true)
+              echo "::notice::GET usage month -> $code"
+              if [ "$code" != "200" ]; then echo "::error::serve did not answer"; tail -60 /tmp/serve.log; fi
+              echo "--- serve log (tail) ---"; tail -40 /tmp/serve.log
+            '
