@@ -80,29 +80,35 @@ jobs:
             -v "$PWD/src:/src" \
             -e TOKEN="$TOKEN" \
             ubuntu:noble bash -c '
+              # Los logs de Actions no son legibles desde fuera: todo diagnóstico sale como anotación.
+              ann() { while IFS= read -r l; do echo "::$1::$l"; done; }
               set -uo pipefail
               apt-get update -qq && apt-get install -y -qq libatomic1 ca-certificates >/dev/null
               export PATH=/opt/node/bin:$PATH
-              uname -m; node -v
-              echo "::notice::glibc $(ldd --version | head -1)"
+              echo "::notice::arch=$(uname -m) node=$(node -v) glibc=$(ldd --version | head -1)"
               cd /src
-              npm i -g pnpm@11.24.0 >/dev/null 2>&1
-              if pnpm install --frozen-lockfile --ignore-scripts >/tmp/install.log 2>&1; then
+              corepack enable >/dev/null 2>&1
+              if corepack pnpm --version >/tmp/pnpmv 2>&1; then echo "::notice::pnpm $(cat /tmp/pnpmv)"; else echo "::error::corepack pnpm failed"; ann error </tmp/pnpmv; fi
+              if corepack pnpm install --frozen-lockfile --ignore-scripts >/tmp/install.log 2>&1; then
                 echo "::notice::arm64 pnpm install (ignore-scripts) ok"
               else
-                echo "::error::arm64 pnpm install failed"; tail -30 /tmp/install.log
+                echo "::error::arm64 pnpm install failed (exit $?)"
+                grep -E "ERR|rror|fail" /tmp/install.log | head -15 | ann error
+                tail -n 15 /tmp/install.log | ann error
               fi
               mkdir -p /tmp/ws && cd /tmp/ws
               node /src/packages/cli/dist/index.js serve --port 4170 --hostname 127.0.0.1 --token "$TOKEN" --workspace /tmp/ws >/tmp/serve.log 2>&1 &
-              for i in $(seq 1 60); do curl -fs http://127.0.0.1:4170/health >/dev/null && break; sleep 2; done
+              SPID=$!
+              for i in $(seq 1 60); do curl -fs http://127.0.0.1:4170/health >/dev/null 2>&1 && break; kill -0 $SPID 2>/dev/null || break; sleep 2; done
+              if ! kill -0 $SPID 2>/dev/null; then echo "::error::qwen serve exited early"; fi
               H="Authorization: Bearer $TOKEN"
               code=$(curl -s -o /tmp/health.json -w "%{http_code}" http://127.0.0.1:4170/health || true)
               echo "::notice::GET /health -> $code"
-              code=$(curl -s -o /tmp/w.json -w "%{http_code}" -H "$H" -X POST -H "Content-Type: application/json" \
+              code=$(curl -s -o /tmp/w.json -w "%{http_code}" -H "$H" -H "Content-Type: application/json" -X POST \
                 -d "{\"scope\":\"workspace\",\"key\":\"general.outputStyle\",\"value\":\"Concise\"}" http://127.0.0.1:4170/workspace/settings || true)
               echo "::notice::POST general.outputStyle -> $code"
-              code=$(curl -s -o /dev/null -w "%{http_code}" -H "$H" http://127.0.0.1:4170/usage/dashboard?month=2026-10 || true)
+              code=$(curl -s -o /tmp/u.json -w "%{http_code}" -H "$H" "http://127.0.0.1:4170/usage/dashboard?month=2026-10" || true)
               echo "::notice::GET usage month -> $code"
-              if [ "$code" != "200" ]; then echo "::error::serve did not answer"; tail -60 /tmp/serve.log; fi
-              echo "--- serve log (tail) ---"; tail -40 /tmp/serve.log
+              if [ "$code" != "200" ]; then echo "::error::serve did not answer as expected"; tail -n 40 /tmp/serve.log | ann error; fi
+              kill $SPID 2>/dev/null || true
             '
