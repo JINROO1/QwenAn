@@ -3,7 +3,9 @@
 # Qwen Code (v0.28.0 + parches), troceados con manifest, y los verifica reensamblando.
 # Uso: build-assets.sh <directorio_salida>
 set -euo pipefail
-OUT="$(cd "$1" && pwd)"; mkdir -p "$OUT"
+mkdir -p "$1"
+OUT="$(cd "$1" && pwd)"
+trap 'echo "::error::fallo en build-assets.sh línea $LINENO: $BASH_COMMAND"' ERR
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 WORK="$RUNNER_TEMP/assets-work"; rm -rf "$WORK"; mkdir -p "$WORK"
