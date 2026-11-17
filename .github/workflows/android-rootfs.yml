@@ -1,0 +1,37 @@
+name: android-rootfs
+
+# Paso 2 del plan Android: rootfs de la distro (Ubuntu noble arm64) con apt, troceado
+# en fragmentos de 64 MiB con SHA-256 y manifest.json. Se publica como artefacto.
+# Los logs no son legibles desde el sandbox: el resultado sale en anotaciones.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/e2e27cb5-qwenan]
+    paths:
+      - '.github/workflows/android-rootfs.yml'
+      - '.github/rootfs/**'
+
+permissions:
+  contents: read
+
+jobs:
+  rootfs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Register arm64 emulation (binfmt)
+        run: docker run --privileged --rm tonistiigi/binfmt --install arm64
+
+      - name: Build and verify rootfs
+        run: bash .github/rootfs/build-rootfs.sh "$RUNNER_TEMP/rootfs"
+
+      - name: Upload rootfs fragments and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwenan-rootfs-noble-arm64
+          path: ${{ runner.temp }}/rootfs/
+          retention-days: 14
+          if-no-files-found: error
