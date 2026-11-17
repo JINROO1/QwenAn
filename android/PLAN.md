@@ -114,3 +114,23 @@ Limitación del entorno de desarrollo: los logs y artefactos de Actions no son a
 2. Aplicar la lista de modificaciones (sandbox, nativos, rutas) como parches sobre un commit fijo de `QwenLM/qwen-code`.
 3. Completar la matriz de paridad y, con ella, implementar en el Web Shell las funciones que falten.
 4. Diseño mobile-first vertical con safe-area insets, sin solapamiento con la barra de navegación del sistema.
+
+## Estado: Web Shell propia (`webshell/`)
+
+Decisión: la UI no se copia de la Web Shell oficial. Se construye una **UI propia** sobre su **capa headless publicada** en npm:
+
+- `@qwen-code/web-shell@0.27.4/daemon-react-sdk`: providers y hooks (sesiones, transcripción, permisos, archivos, MCP, memoria, agentes, herramientas, ajustes, proveedores, canales, uso, estado).
+- `@qwen-code/sdk@0.1.34/daemon`: cliente del daemon.
+
+Verificado:
+
+- `tsc --noEmit` sin errores y `vite build` correcto (1.4 MB JS, 393 kB comprimido).
+- Daemon `qwen serve` 0.27.4 (npm) en loopback: `/health`, `/capabilities` y `/daemon/status` responden 200. CORS permite el origen de la UI.
+- El SDK conecta con el daemon y `listWorkspaceSessions` responde.
+
+No verificado todavía:
+
+- Interacción visual en navegador (no hay navegador disponible en el sandbox; las pruebas irán en CI).
+- Envío de prompts y permisos de extremo a extremo (requiere credenciales de modelo).
+
+Siguientes pasos: cubrir el resto de bloques y pantallas de la Web Shell original (ver `webshell/README.md`), dividir el bundle, y pruebas visuales móviles en CI.
