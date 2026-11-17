@@ -26,7 +26,8 @@ jobs:
       - name: Install emulation tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-user-static binfmt-support debootstrap curl xz-utils
+          sudo apt-get install -y qemu-user-static curl xz-utils
+          ls /usr/bin/qemu-aarch64-static
 
       - name: Download and verify Ubuntu base (arm64)
         run: |
