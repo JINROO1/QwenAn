@@ -10,7 +10,8 @@ import type { PromptFile, PromptImage } from '../types-local';
 export interface SlashCommand {
   name: string;
   hint: string;
-  run: () => void;
+  /** Recibe el texto que sigue al nombre, p. ej. "/output-style Concise" → "Concise". */
+  run: (arg: string) => void;
 }
 
 interface Props {
@@ -48,23 +49,24 @@ export default function Composer({ commands, onSent, onError }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const busy = sending || streaming !== 'idle';
-  const isSlash = draft.startsWith('/') && !draft.includes(' ');
+  const isSlash = draft.startsWith('/') && !draft.includes('\n');
+  const firstToken = draft.slice(1).split(/\s/)[0]?.toLowerCase() ?? '';
+  const hasArg = /\s/.test(draft.slice(1));
 
   const suggestions = useMemo(() => {
-    if (!isSlash) return [];
-    const query = draft.slice(1).toLowerCase();
-    return commands.filter((c) => c.name.startsWith(query));
-  }, [isSlash, draft, commands]);
+    if (!isSlash || hasArg) return [];
+    return commands.filter((c) => c.name.startsWith(firstToken));
+  }, [isSlash, hasArg, firstToken, commands]);
 
   const models = useMemo(() => providers.flatMap((p) => p.models ?? []), [providers]);
   const currentModel = current?.modelId ?? '';
 
   const runSlash = (text: string): boolean => {
-    const name = text.slice(1).trim().toLowerCase();
-    const cmd = commands.find((c) => c.name === name);
+    const [head = '', ...rest] = text.slice(1).trim().split(/\s+/);
+    const cmd = commands.find((c) => c.name === head.toLowerCase());
     if (!cmd) return false;
     setDraft('');
-    cmd.run();
+    cmd.run(rest.join(' '));
     return true;
   };
 
@@ -196,7 +198,7 @@ export default function Composer({ commands, onSent, onError }: Props) {
         <ul className="suggestions" aria-label="Comandos">
           {suggestions.map((c) => (
             <li key={c.name}>
-              <button type="button" className="option" onClick={() => runSlash(`/${c.name}`)}>
+              <button type="button" className="option" onClick={() => setDraft(`/${c.name}${c.hint.includes('<') ? ' ' : ''}`)}>
                 <span className="option-title">/{c.name}</span>
                 <span className="option-desc">{c.hint}</span>
               </button>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useActions } from '@qwen-code/web-shell/daemon-react-sdk';
 import type {
   DaemonStatusTranscriptBlock,
@@ -12,10 +12,12 @@ type Block = DaemonTranscriptBlock;
 
 interface Props {
   block: Block;
+  /** Sube cada vez que se pide expandirlo todo (/expand-now). */
+  expandVersion?: number;
 }
 
 /** Renderiza cada tipo de bloque del transcript del daemon. */
-export default function TranscriptBlock({ block }: Props) {
+export default function TranscriptBlock({ block, expandVersion = 0 }: Props) {
   switch (block.kind) {
     case 'user': {
       const t = block as DaemonTextTranscriptBlock;
@@ -36,16 +38,15 @@ export default function TranscriptBlock({ block }: Props) {
 
     case 'thought':
       return (
-        <details className="msg msg-thought">
-          <summary>Razonamiento</summary>
+        <ThoughtCard expandVersion={expandVersion}>
           <div className="msg-thought-body">
             <Markdown text={(block as DaemonTextTranscriptBlock).text} />
           </div>
-        </details>
+        </ThoughtCard>
       );
 
     case 'tool':
-      return <ToolCard block={block} />;
+      return <ToolCard block={block} expandVersion={expandVersion} />;
 
     case 'permission':
       return <PermissionCard block={block} />;
@@ -119,8 +120,24 @@ function AttachmentList({ block }: { block: DaemonTextTranscriptBlock }) {
   );
 }
 
-function ToolCard({ block }: { block: Extract<Block, { kind: 'tool' }> }) {
+function ThoughtCard({ expandVersion, children }: { expandVersion: number; children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (expandVersion > 0) setOpen(true);
+  }, [expandVersion]);
+  return (
+    <details className="msg msg-thought" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+      <summary>Razonamiento</summary>
+      {children}
+    </details>
+  );
+}
+
+function ToolCard({ block, expandVersion }: { block: Extract<Block, { kind: 'tool' }>; expandVersion: number }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (expandVersion > 0) setOpen(true);
+  }, [expandVersion]);
   const preview = block.preview;
   const duration = block.durationMs !== undefined ? formatDuration(block.durationMs) : undefined;
 
