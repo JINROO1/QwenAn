@@ -34,8 +34,8 @@ def main():
                        "chunkSize": CHUNK, "chunks": chunks})
         os.remove(file)
     json.dump({"assets": assets}, open(os.path.join(out, "manifest.json"), "w"), indent=2)
-    for a in assets:
-        print(f"{a['file']}: {a['size']} bytes, {len(a['chunks'])} fragmentos")
+    resumen = "; ".join(f"{a['file']} {a['size']}B {len(a['chunks'])} fragmentos" for a in assets)
+    print(f"::notice::ASSETS {resumen}")
 
 if __name__ == '__main__':
     main()

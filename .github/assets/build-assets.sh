@@ -57,10 +57,9 @@ tar -C "$WORK" -cf - node | zstd -19 -T0 --long=27 -o "$WORK/node-${NODE_VERSION
 # 6) Trocear y manifest.
 python3 "$HERE/chunk.py" "$OUT" "$WORK/node-${NODE_VERSION}-linux-arm64.tar.zst" "$WORK/qwen-code-${QWEN_TAG#v}-linux-arm64.tar.zst"
 cp "$HERE/chunk.py" "$OUT/"
-ls -la "$OUT" | sed 's/^/::notice::/'
 
 # 7) Verificación: reensamblar desde fragmentos, comprobar SHA-256 y arrancar qwen serve con el Node empaquetado.
-python3 - "$OUT" "$WORK/reassembled" <<'PY'
+python3 - "$OUT" "$WORK/reassembled" > "$WORK/reassembly.txt" <<'PY'
 import hashlib, json, os, sys
 out, dst = sys.argv[1], sys.argv[2]
 os.makedirs(dst, exist_ok=True)
@@ -73,22 +72,24 @@ for a in m['assets']:
             assert hashlib.sha256(data).hexdigest() == c['sha256'], c['name']
             h.update(data); f.write(data)
     assert h.hexdigest() == a['sha256'], a['file']
-    print(f"::notice::reensamblado {a['file']} ok ({len(a['chunks'])} fragmentos)")
+    print(f"reensamblado {a['file']} ok ({len(a['chunks'])} fragmentos)")
 PY
-docker run --rm --platform linux/arm64 -v "$WORK/reassembled:/assets:ro" ubuntu:noble bash -c '
+RESULT=$(docker run --rm --platform linux/arm64 -v "$WORK/reassembled:/assets:ro" ubuntu:noble bash -c '
   set -uo pipefail
   apt-get update -qq && apt-get install -y -qq zstd libatomic1 ca-certificates curl >/dev/null
   mkdir -p /opt/qwen && cd /opt/qwen
   zstd -dc /assets/node-*-linux-arm64.tar.zst | tar -x
   zstd -dc /assets/qwen-code-*-linux-arm64.tar.zst | tar -x
   NODE=/opt/qwen/node/bin/node
-  echo "::notice::node $($NODE -v) arch $(uname -m)"
+  NODEV=$($NODE -v); ARCH=$(uname -m)
   mkdir -p /tmp/ws
   $NODE /opt/qwen/src/packages/cli/dist/index.js serve --port 4170 --hostname 127.0.0.1 --token t0k --workspace /tmp/ws >/tmp/serve.log 2>&1 &
   PID=$!
   for i in $(seq 1 60); do curl -fs http://127.0.0.1:4170/health >/dev/null 2>&1 && break; kill -0 $PID 2>/dev/null || break; sleep 2; done
   code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:4170/health || true)
-  echo "::notice::GET /health -> $code (bundle reensamblado)"
-  if [ "$code" != "200" ]; then echo "::error::serve no respondió"; tail -n 30 /tmp/serve.log | while IFS= read -r l; do echo "::error::$l"; done; exit 1; fi
   kill $PID 2>/dev/null || true
-'
+  echo "RESULT node=$NODEV arch=$ARCH health=$code"
+  if [ "$code" != "200" ]; then echo "SERVE_LOG $(tail -n 8 /tmp/serve.log | tr '\n' ' ')"; exit 1; fi
+') || { echo "::error::verificación falló: $RESULT"; exit 1; }
+echo "::notice::$(cat "$WORK/reassembly.txt" | tr '\n' ' ') $RESULT"
+
