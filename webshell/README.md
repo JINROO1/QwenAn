@@ -67,10 +67,10 @@ npx @qwen-code/qwen-code serve --port 4170 --hostname 127.0.0.1 \
 | `/expand-now` | Hecho | Expande razonamiento y herramientas |
 | `/reload-plugins` | Hecho | Probado contra el daemon |
 | `/cd` | Parcial | Muestra el directorio; el daemon está vinculado a un único workspace |
-| `/output-style`, `/collapse-on-resume`, `/expand-on-resume` | Bloqueado | El daemon rechaza esas claves ("no modificable vía esta API") |
+| `/output-style`, `/collapse-on-resume`, `/expand-on-resume` | Hecho con parche en el daemon | Requieren el parche `patches/qwen-code/0001-…`; sin él el daemon responde `disallowed_key` |
 | `/curator`, `/peers`, `/cpu-profile` | No disponible | Sin ruta en el daemon (`/peers` usa sockets locales de la CLI) |
 
-Para cerrar los tres bloqueados hace falta añadir esas claves al daemon en el fork de qwen-code.
+Los tres comandos dependen del parche `patches/qwen-code/0001-web-shell-allow-output-style-and-history-settings.patch`, verificado sobre el bundle del daemon 0.27.4. Falta aplicarlo al fork y publicarlo.
 
 ## Limitaciones conocidas
 

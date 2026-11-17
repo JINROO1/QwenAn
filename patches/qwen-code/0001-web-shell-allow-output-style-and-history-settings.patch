@@ -1,0 +1,22 @@
+diff --git a/packages/cli/src/serve/routes/workspace-settings.ts b/packages/cli/src/serve/routes/workspace-settings.ts
+index 42444ccd..b0dd1e91 100644
+--- a/packages/cli/src/serve/routes/workspace-settings.ts
++++ b/packages/cli/src/serve/routes/workspace-settings.ts
+@@ -87,6 +87,8 @@ const OUTPUT_LANGUAGE_OPTIONS = SUPPORTED_LANGUAGES.map(
+ // not in the dialog allowlist), but the Web Shell settings panel still renders
+ // their rows and needs to read + persist them; for `voiceModel` the daemon
+ // `/voice/stream` then reads it back via `loadSettings`.
++// `general.outputStyle` and `ui.history.collapseOnResume` back the Web Shell's
++// `/output-style` and `/collapse-on-resume` / `/expand-on-resume` commands.
+ const WEB_SHELL_SETTINGS = new Set([
+   'ui.allowedApprovalModes',
+   'ui.compactMode',
+@@ -96,6 +98,8 @@ const WEB_SHELL_SETTINGS = new Set([
+   'advisorModel',
+   'mcpServers',
+   'worktree.defaultForNewSessions',
++  'general.outputStyle',
++  'ui.history.collapseOnResume',
+ ]);
+ 
+ const LIVE_WEB_SHELL_SETTINGS = [

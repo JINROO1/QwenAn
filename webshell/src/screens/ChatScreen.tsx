@@ -124,7 +124,7 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
             return;
           }
           void workspaceActions
-            .setWorkspaceSetting('workspace', 'outputStyle', style === 'default' ? null : style)
+            .setWorkspaceSetting('workspace', 'general.outputStyle', style === 'default' ? null : style)
             .then(() => report(`Estilo de salida: ${style}. Se aplica al reiniciar el daemon.`), fail);
         },
       },
