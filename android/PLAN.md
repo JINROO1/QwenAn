@@ -129,6 +129,16 @@ Pendiente: el sandbox real dentro de proot en un dispositivo, y el envío de pro
 
 Notas de CI: Node 26 no trae `corepack`; el montaje de Node es de solo lectura; pnpm necesita `CI=true` para reinstalar sin TTY. Los logs no son legibles desde el sandbox: todo diagnóstico se emite como anotaciones.
 
+## Estado: rootfs de la distro (verificado en CI)
+
+Workflow `.github/workflows/android-rootfs.yml`, ejecución `success`:
+
+- Base `ubuntu:noble` arm64. Paquetes: `ca-certificates curl git python3 python3-venv libatomic1 build-essential`.
+- Verificación del artefacto: se importa de nuevo y dentro: `aarch64`, `apt-get update` y `apt-get upgrade` simulado correctos, `git 2.43.0`, `Python 3.12.3`, `libatomic1` instalado.
+- Salida: `qwenan-rootfs-noble-arm64.tar.zst` (~93 MB), troceado en fragmentos de 64 MiB con SHA-256 por fragmento y `manifest.json`. Se publica como artefacto de Actions.
+
+Limitación: los artefactos caducan (14 días) y su descarga exige autenticación de GitHub. Para el teléfono hará falta una publicación estable (release privada con token en la app, que es aceptable porque la app es personal).
+
 ## Próximos pasos inmediatos
 
 1. ~~Validar `qwen serve` dentro del mismo contenedor glibc~~ (hecho, ver arriba). Siguiente: nativos (`pnpm rebuild sharp @lydell/node-pty`) en arm64.
