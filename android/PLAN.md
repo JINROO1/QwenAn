@@ -95,3 +95,22 @@ Esto es solo un indicio. Falta una **matriz de paridad** función por función (
 - **Seguridad**: el agente ejecuta código con los permisos de la app, sin sandbox del kernel. Requiere revisar reglas de permisos por defecto.
 - **Almacenamiento**: el rootfs más Node y el bundle ocupan varios GB con herramientas completas.
 - **Política de distribución**: descargar código ejecutable tras la instalación puede chocar con las políticas de Google Play. Si se distribuye fuera de Play, no aplica.
+
+## Estado: validación glibc arm64 (verificada)
+
+Workflow `.github/workflows/android-rootfs-spike.yml`, ejecución `success` en la rama:
+
+- Node **26.13.1** `linux-arm64` descargado de nodejs.org y verificado con `SHASUMS256.txt`.
+- Corre dentro de `ubuntu:noble` `linux/arm64` (emulado con binfmt): `node -v` → `v26.13.1`, `process.arch` → `arm64`, V8 `14.6`.
+- `apt-get update` y `apt-cache` funcionan dentro del contenedor arm64.
+- **Dependencia descubierta:** el binario de Node necesita `libatomic1`. Debe ir en el rootfs (`apt-get install libatomic1`).
+- glibc: Ubuntu noble es la base glibc de referencia. Sin Ubuntu noble ni `libatomic1`, Node no arranca (`libatomic.so.1: cannot open shared object file`).
+
+Limitación del entorno de desarrollo: los logs y artefactos de Actions no son accesibles desde el sandbox (blobs fuera de la lista permitida). Para depurar se usan **anotaciones** (`::error::`), legibles por `api.github.com`.
+
+## Próximos pasos inmediatos
+
+1. Validar `qwen serve` dentro del mismo contenedor glibc: `npm ci` del bundle, `node dist/cli.js serve`, y una petición a `/health`.
+2. Aplicar la lista de modificaciones (sandbox, nativos, rutas) como parches sobre un commit fijo de `QwenLM/qwen-code`.
+3. Completar la matriz de paridad y, con ella, implementar en el Web Shell las funciones que falten.
+4. Diseño mobile-first vertical con safe-area insets, sin solapamiento con la barra de navegación del sistema.
