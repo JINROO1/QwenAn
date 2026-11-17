@@ -36,7 +36,8 @@ No se aplican automáticamente: son el registro del cambio para llevarlo al fork
   añadido al entorno (la RAM física es de 4 GB; el swap es memoria virtual, más lenta).
 - El daemon compilado es `packages/cli/dist/index.js` (`qwen 0.28.0`). Probado: `general.outputStyle` → 200,
   `ui.history.collapseOnResume` → 200, `tools.approvalMode` → 400 `disallowed_key`.
-- Con el parche 0002 se recompilan `core` y `cli` (ver resultado en el historial del proyecto).
+- Con el parche 0002 se recompilan `core` y `cli`: correcto.
+- Prueba de extremo a extremo (navegador headless, daemon compilado con 0001 y 0002): `/monthly 2026-10` muestra la tarjeta del mes; `/monthly 2026-13` avisa de formato no válido; `/expand-on-resume` y `/collapse-on-resume` muestran su aviso de éxito.
 
 ### Pendiente
 
