@@ -63,7 +63,7 @@ npx @qwen-code/qwen-code serve --port 4170 --hostname 127.0.0.1 \
 | Sesiones: renombrar, archivar, exportar (md), eliminar | Hecho | |
 | Archivos, uso, MCP, skills, herramientas, memoria, proveedores, ajustes, estado | Hecho | Ajustes: solo los que el daemon permite modificar |
 | `/rollback` | Hecho (sin probar en vivo) | Lista turnos con snapshot; vuelve con o sin archivos |
-| `/monthly` | Hecho | Resumen del mes y descarga CSV |
+| `/monthly [AAAA-MM]` | Parcial | Resumen del mes en curso y descarga CSV. Un mes concreto no está disponible: el daemon solo acepta hoy, 7 o 30 días (requiere parche en `/usage/dashboard`) |
 | `/expand-now` | Hecho | Expande razonamiento y herramientas |
 | `/reload-plugins` | Hecho | Probado contra el daemon |
 | `/cd` | Parcial | Muestra el directorio; el daemon está vinculado a un único workspace |

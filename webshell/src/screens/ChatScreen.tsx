@@ -89,7 +89,26 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
       { name: 'detener', hint: 'Detener la respuesta en curso', run: () => void actions.cancel() },
       { name: 'ayuda', hint: 'Ver atajos y comandos', run: () => setHelpOpen((o) => !o) },
       { name: 'rollback', hint: 'Volver a un punto anterior de la conversación', run: () => setRewindOpen(true) },
-      { name: 'monthly', hint: 'Ver el uso del mes en curso', run: () => setMonthlyOpen((o) => !o) },
+      {
+        name: 'monthly',
+        hint: '[AAAA-MM]: uso del mes en curso (un mes concreto aún no está disponible)',
+        run: (arg) => {
+          const month = arg.trim();
+          if (!month) {
+            setMonthlyOpen((o) => !o);
+            return;
+          }
+          if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+            setInfo(null);
+            setError(`Formato no válido: "${month}". Usa AAAA-MM, por ejemplo 2026-10.`);
+            return;
+          }
+          // El endpoint /usage/dashboard solo acepta today | week | month.
+          setInfo(null);
+          setError(`El daemon no permite elegir ${month}. Se muestra el mes en curso (últimos 30 días).`);
+          setMonthlyOpen(true);
+        },
+      },
       {
         name: 'expand-now',
         hint: 'Expandir razonamiento y herramientas de la conversación',
