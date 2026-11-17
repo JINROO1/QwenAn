@@ -88,7 +88,7 @@ jobs:
               echo "::notice::arch=$(uname -m) node=$(node -v) glibc=$(ldd --version | head -1)"
               cd /src
               # Node 26 ya no trae corepack: pnpm se instala con npm (versión fijada por packageManager).
-              if npm i -g pnpm@11.24.0 >/tmp/npm.log 2>&1; then echo "::notice::pnpm $(pnpm -v) installed"; else echo "::error::npm i -g pnpm failed"; tail -n 15 /tmp/npm.log | ann error; fi
+              if npm i -g --prefix /usr/local pnpm@11.24.0 >/tmp/npm.log 2>&1; then echo "::notice::pnpm $(pnpm -v) installed"; else echo "::error::npm i -g pnpm failed"; tail -n 15 /tmp/npm.log | ann error; fi
               if pnpm install --frozen-lockfile --ignore-scripts >/tmp/install.log 2>&1; then
                 echo "::notice::arm64 pnpm install (ignore-scripts) ok"
               else
