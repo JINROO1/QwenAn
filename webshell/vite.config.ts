@@ -14,5 +14,17 @@ export default defineConfig({
     target: 'es2022',
     outDir: 'dist',
     sourcemap: false,
+    // El punto de entrada de @qwen-code/web-shell/daemon-react-sdk pesa ~1,7 MB;
+    // los visores pesados (diagramas, hojas de cálculo, vista previa) ya son
+    // fragmentos diferidos. Partirlo más requiere cambios en el paquete upstream.
+    chunkSizeWarningLimit: 1800,
+    rolldownOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/scheduler')) return 'react';
+          return undefined;
+        },
+      },
+    },
   },
 });

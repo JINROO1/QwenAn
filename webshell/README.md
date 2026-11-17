@@ -74,8 +74,10 @@ Los tres comandos dependen del parche `patches/qwen-code/0001-web-shell-allow-ou
 
 ## Limitaciones conocidas
 
-- Bundle de ~1.4 MB (≈400 KB comprimido). Casi todo viene del SDK de UI de `@qwen-code/web-shell`
-  (traducciones de todos los idiomas y componentes de editor). Reducirlo implica usar solo
-  `@qwen-code/sdk/daemon` con hooks propios.
+- Bundle principal de ~1,7 MB (≈445 KB comprimido), React en fragmento aparte (≈68 KB comprimido).
+  El grueso viene del punto de entrada de `@qwen-code/web-shell/daemon-react-sdk`; los visores pesados
+  ya son fragmentos diferidos. Reducirlo implica usar solo `@qwen-code/sdk/daemon` con hooks propios.
+  El umbral de aviso de Vite está en 1800 kB, con el motivo en `vite.config.ts`.
+- `/monthly` solo permite el mes en curso: el endpoint `/usage/dashboard` acepta `today | week | month`.
 - Las pestañas Sesiones, Workspace y Ajustes se cargan al primer uso.
 - Los iconos del menú de Workspace son emojis: dependen de la fuente del sistema.
