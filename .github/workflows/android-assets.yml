@@ -1,0 +1,43 @@
+name: android-assets
+
+# Paso 3 del plan Android: assets de runtime (Node 26.13.1 linux-arm64 y bundle de
+# Qwen Code v0.28.0 con parches), troceados con SHA-256 y manifest. La CI reensambla
+# los fragmentos y arranca qwen serve con el Node empaquetado.
+# Se publican como artefacto. Resultados en anotaciones.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/e2e27cb5-qwenan]
+    paths:
+      - '.github/workflows/android-assets.yml'
+      - '.github/assets/**'
+      - 'patches/qwen-code/**'
+
+permissions:
+  contents: read
+
+jobs:
+  assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Register arm64 emulation (binfmt)
+        run: docker run --privileged --rm tonistiigi/binfmt --install arm64
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.13.1'
+
+      - name: Build, package and verify assets
+        run: bash .github/assets/build-assets.sh "$RUNNER_TEMP/assets-out"
+
+      - name: Upload assets and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwenan-assets-arm64
+          path: ${{ runner.temp }}/assets-out/
+          retention-days: 14
+          if-no-files-found: error
