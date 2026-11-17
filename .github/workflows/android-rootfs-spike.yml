@@ -1,0 +1,85 @@
+name: android-rootfs-spike
+
+# Validación glibc arm64: base Ubuntu + Node 26.13.1 dentro de un chroot
+# emulado con qemu-user. No publica nada; solo comprueba que el rootfs
+# arranca, que Node responde y que apt funciona.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/e2e27cb5-qwenan]
+    paths:
+      - '.github/workflows/android-rootfs-spike.yml'
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '26.13.1'
+  UBUNTU_BASE_DIR: 'https://cdimage.ubuntu.com/ubuntu-base/releases/noble/release'
+
+jobs:
+  rootfs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Install emulation tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support debootstrap curl xz-utils
+
+      - name: Download and verify Ubuntu base (arm64)
+        run: |
+          set -euo pipefail
+          mkdir -p work && cd work
+          curl -fsSLO "$UBUNTU_BASE_DIR/SHA256SUMS"
+          FILE=$(grep -oE 'ubuntu-base-[0-9.]+-base-arm64\.tar\.gz' SHA256SUMS | sort -V | tail -1)
+          echo "BASE_FILE=$FILE" >> "$GITHUB_ENV"
+          curl -fsSLO "$UBUNTU_BASE_DIR/$FILE"
+          grep " $FILE\$" SHA256SUMS > base.sha256
+          sha256sum -c base.sha256
+
+      - name: Download and verify Node ${{ env.NODE_VERSION }} (linux-arm64)
+        run: |
+          set -euo pipefail
+          cd work
+          BASE=https://nodejs.org/dist/v${NODE_VERSION}
+          curl -fsSLO "$BASE/SHASUMS256.txt"
+          NODE_TAR=node-v${NODE_VERSION}-linux-arm64.tar.xz
+          curl -fsSLO "$BASE/$NODE_TAR"
+          grep " $NODE_TAR\$" SHASUMS256.txt > node.sha256
+          sha256sum -c node.sha256
+
+      - name: Build rootfs
+        run: |
+          set -euo pipefail
+          cd work
+          sudo rm -rf rootfs && sudo mkdir rootfs
+          sudo tar -xzf "$BASE_FILE" -C rootfs
+          sudo tar -xJf "node-v${NODE_VERSION}-linux-arm64.tar.xz" -C rootfs/opt
+          sudo mv "rootfs/opt/node-v${NODE_VERSION}-linux-arm64" rootfs/opt/node
+          sudo cp /etc/resolv.conf rootfs/etc/resolv.conf
+          echo 'nameserver 1.1.1.1' | sudo tee rootfs/etc/resolv.conf >/dev/null
+
+      - name: Validate inside arm64 chroot (glibc + Node + apt)
+        run: |
+          set -euo pipefail
+          cd work
+          sudo mount -t proc proc rootfs/proc
+          sudo mount --bind /dev rootfs/dev
+          sudo chroot rootfs /bin/sh -c '
+            set -e
+            cat /etc/os-release | head -2
+            uname -m
+            ldd --version | head -1
+            /opt/node/bin/node -v
+            /opt/node/bin/node -e "console.log(process.arch, process.versions.v8)"
+            apt-get update -qq
+            apt-cache policy git python3 | head -6
+          '
+
+      - name: Unmount
+        if: always()
+        run: |
+          sudo umount work/rootfs/dev || true
+          sudo umount work/rootfs/proc || true
