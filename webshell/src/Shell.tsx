@@ -2,10 +2,10 @@ import { useState } from 'react';
 import type { DaemonConfig } from './config';
 import ChatScreen from './screens/ChatScreen';
 import SessionsScreen from './screens/SessionsScreen';
-import StatusScreen from './screens/StatusScreen';
+import WorkspaceScreen from './screens/WorkspaceScreen';
 import SettingsScreen from './screens/SettingsScreen';
 
-export type Tab = 'chat' | 'sessions' | 'status' | 'settings';
+export type Tab = 'chat' | 'sessions' | 'workspace' | 'settings';
 
 interface Props {
   config: DaemonConfig;
@@ -16,7 +16,7 @@ interface Props {
 const TABS: Array<{ id: Tab; label: string; icon: string }> = [
   { id: 'chat', label: 'Chat', icon: '💬' },
   { id: 'sessions', label: 'Sesiones', icon: '🗂️' },
-  { id: 'status', label: 'Estado', icon: '📊' },
+  { id: 'workspace', label: 'Workspace', icon: '🧰' },
   { id: 'settings', label: 'Ajustes', icon: '⚙️' },
 ];
 
@@ -52,7 +52,7 @@ export default function Shell({ config, onEdit, onDisconnect }: Props) {
         {tab === 'sessions' && (
           <SessionsScreen activeSessionId={sessionId} onOpen={openSession} onNew={newChat} />
         )}
-        {tab === 'status' && <StatusScreen />}
+        {tab === 'workspace' && <WorkspaceScreen />}
         {tab === 'settings' && (
           <SettingsScreen config={config} onEdit={onEdit} onDisconnect={onDisconnect} />
         )}

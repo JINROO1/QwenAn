@@ -1,4 +1,6 @@
 import type { DaemonConfig } from '../config';
+import StatusScreen from './StatusScreen';
+import { useState } from 'react';
 
 interface Props {
   config: DaemonConfig;
@@ -7,6 +9,8 @@ interface Props {
 }
 
 export default function SettingsScreen({ config, onEdit, onDisconnect }: Props) {
+  const [showStatus, setShowStatus] = useState(false);
+  if (showStatus) return <StatusScreen onBack={() => setShowStatus(false)} />;
   return (
     <section className="page">
       <header className="page-head">
@@ -28,6 +32,9 @@ export default function SettingsScreen({ config, onEdit, onDisconnect }: Props) 
       </div>
 
       <div className="stack">
+        <button type="button" className="btn btn-block" onClick={() => setShowStatus(true)}>
+          Estado del daemon
+        </button>
         <button type="button" className="btn btn-block" onClick={onEdit}>
           Editar conexión
         </button>

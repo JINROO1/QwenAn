@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DaemonSessionProvider,
   useActions,
@@ -8,6 +8,7 @@ import {
   useTranscriptBlocks,
 } from '@qwen-code/web-shell/daemon-react-sdk';
 import TranscriptBlock from '../components/TranscriptBlock';
+import Composer, { type SlashCommand } from '../components/Composer';
 
 interface Props {
   sessionId?: string;
@@ -29,36 +30,37 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
   const streaming = useStreamingState();
   const pending = usePendingPermissions();
   const actions = useActions();
-  const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const transcriptRef = useRef<HTMLDivElement>(null);
 
-  // Cuando el daemon crea la sesión tras el primer prompt, la guardamos en la app.
   const activeSessionId = connection.sessionId;
   useEffect(() => {
     if (activeSessionId) onSessionCreated(activeSessionId);
   }, [activeSessionId, onSessionCreated]);
 
-  const busy = sending || streaming !== 'idle';
+  // Sigue la conversación: baja al final cuando llegan bloques nuevos.
+  useEffect(() => {
+    const el = transcriptRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [blocks.length, streaming]);
 
-  const send = async () => {
-    const text = draft.trim();
-    if (!text || busy) return;
-    setSending(true);
-    setError(null);
-    try {
-      await actions.sendPrompt(text);
-      setDraft('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo enviar el mensaje.');
-    } finally {
-      setSending(false);
-    }
-  };
+  const commands: SlashCommand[] = useMemo(
+    () => [
+      { name: 'nueva', hint: 'Empezar una conversación nueva', run: onNewChat },
+      {
+        name: 'renombrar',
+        hint: 'Cambiar el nombre de esta sesión',
+        run: () => setRenaming(true),
+      },
+      { name: 'detener', hint: 'Detener la respuesta en curso', run: () => void actions.cancel() },
+      { name: 'ayuda', hint: 'Ver atajos y comandos', run: () => setHelpOpen((o) => !o) },
+    ],
+    [actions, onNewChat],
+  );
 
-  const cancel = () => {
-    void actions.cancel();
-  };
+  const handleError = (message: string) => setError(message);
 
   return (
     <section className="chat">
@@ -68,16 +70,29 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
             {activeSessionId ? `Conversación ${activeSessionId.slice(0, 8)}` : 'Nueva conversación'}
           </h2>
           <p className="topbar-sub">
-            {connection?.status === 'connected' ? 'Conectado' : 'Conectando…'}
+            {connection.status === 'connected' ? 'Conectado' : 'Conectando…'}
             {streaming !== 'idle' ? ` · ${streaming === 'thinking' ? 'pensando' : 'respondiendo'}` : ''}
           </p>
         </div>
-        <button type="button" className="btn btn-ghost" onClick={onNewChat}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onNewChat}>
           Nueva
         </button>
       </header>
 
-      <div className="transcript">
+      {renaming && <RenameBar onDone={() => setRenaming(false)} onError={handleError} />}
+
+      {helpOpen && (
+        <div className="card help">
+          <h3 className="card-title">Atajos</h3>
+          <ul className="help-list">
+            <li><span className="mono">/</span> comandos (nueva, renombrar, detener, ayuda)</li>
+            <li><span className="mono">!</span> comando de shell directo, por ejemplo <span className="mono">!git status</span></li>
+            <li><span className="mono">Enter</span> envía · <span className="mono">Shift+Enter</span> salto de línea</li>
+          </ul>
+        </div>
+      )}
+
+      <div className="transcript" ref={transcriptRef}>
         {blocks.length === 0 && (
           <div className="empty">
             <h3>¿En qué trabajamos?</h3>
@@ -85,13 +100,13 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
           </div>
         )}
 
-        {blocks.map((block, index) => (
-          <TranscriptBlock key={`${index}-${block.kind}`} block={block} />
+        {blocks.map((block) => (
+          <TranscriptBlock key={block.id} block={block} />
         ))}
 
         {pending.length > 0 && (
           <p className="pending-note">
-            Hay {pending.length} {pending.length === 1 ? 'permiso pendiente' : 'permisos pendientes'}: revísalos arriba.
+            {pending.length === 1 ? 'Hay 1 permiso pendiente.' : `Hay ${pending.length} permisos pendientes.`}
           </p>
         )}
       </div>
@@ -102,40 +117,37 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
         </p>
       )}
 
-      <form
-        className="composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send();
-        }}
-      >
-        <label className="sr-only" htmlFor="prompt">
-          Mensaje para el agente
-        </label>
-        <textarea
-          id="prompt"
-          className="composer-input"
-          rows={1}
-          value={draft}
-          placeholder="Escribe una instrucción…"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              void send();
-            }
-          }}
-        />
-        {streaming !== 'idle' ? (
-          <button type="button" className="btn btn-danger" onClick={cancel}>
-            Detener
-          </button>
-        ) : (
-          <button type="submit" className="btn btn-primary" disabled={!draft.trim() || busy}>
-            Enviar
-          </button>
-        )}
-      </form>
+      <Composer commands={commands} onError={handleError} onSent={() => setError(null)} />
     </section>
+  );
+}
+
+function RenameBar({ onDone, onError }: { onDone: () => void; onError: (m: string) => void }) {
+  const actions = useActions();
+  const [name, setName] = useState('');
+  return (
+    <form
+      className="card rename"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const value = name.trim();
+        if (!value) return;
+        try {
+          await actions.renameSession(value);
+          onDone();
+        } catch (err) {
+          onError(err instanceof Error ? err.message : 'No se pudo renombrar la sesión.');
+        }
+      }}
+    >
+      <label className="field">
+        <span className="field-label">Nuevo nombre</span>
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+      </label>
+      <div className="stack-row">
+        <button type="button" className="btn btn-ghost" onClick={onDone}>Cancelar</button>
+        <button type="submit" className="btn btn-primary" disabled={!name.trim()}>Guardar</button>
+      </div>
+    </form>
   );
 }
