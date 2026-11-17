@@ -38,25 +38,17 @@ jobs:
           tar -xJf "$NODE_TAR"
           mv "node-v${NODE_VERSION}-linux-arm64" node
 
-      - name: C1 pull and uname
-        run: docker run --rm --platform linux/arm64 ubuntu:noble uname -m
-
-      - name: C2 glibc version
-        run: docker run --rm --platform linux/arm64 ubuntu:noble sh -c 'ldd --version | head -1'
-
-      - name: C3 node -v (mounted linux-arm64 Node 26.13.1)
+      - name: Validate glibc + Node 26.13.1 + apt (linux/arm64)
         run: |
-          set +e
+          set -euo pipefail
           docker run --rm --platform linux/arm64 -v "$PWD/work/node:/opt/node:ro" \
-            ubuntu:noble sh -c 'apt-get update -qq && apt-get install -y -qq libatomic1 >/dev/null 2>&1; /opt/node/bin/node -v && /opt/node/bin/node -e "console.log(\"arch=\" + process.arch + \" v8=\" + process.versions.v8 + \" glibc-ok\")" && apt-get update -qq && apt-cache policy git python3 | head -8' > c3.out 2>&1
-          rc=$?
-          python3 -c "import sys,json; t=open('c3.out').read(); print('::error title=C3 rc=$rc::'+t.replace('%','%25').replace('\n','%0A').replace('\r',''))"
-          exit $rc
-
-      - name: C4 node runtime check
-        run: |
-          docker run --rm --platform linux/arm64 -v "$PWD/work/node:/opt/node:ro" \
-            ubuntu:noble /opt/node/bin/node -e 'console.log("arch=" + process.arch + " v8=" + process.versions.v8)'
-
-      - name: C5 apt-get update
-        run: docker run --rm --platform linux/arm64 ubuntu:noble apt-get update -qq
+            ubuntu:noble sh -c '
+              set -e
+              uname -m
+              ldd --version | head -1
+              apt-get update -qq
+              apt-get install -y -qq libatomic1 >/dev/null
+              /opt/node/bin/node -v
+              /opt/node/bin/node -e "console.log(\"arch=\" + process.arch + \" v8=\" + process.versions.v8)"
+              apt-cache policy git python3 | grep -E "^[a-z]" -A1 | head -8
+            '
