@@ -52,6 +52,7 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [rewindOpen, setRewindOpen] = useState(false);
   const [monthlyOpen, setMonthlyOpen] = useState(false);
+  const [monthlyMonth, setMonthlyMonth] = useState<string | undefined>(undefined);
   const [expandVersion, setExpandVersion] = useState(0);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -91,10 +92,11 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
       { name: 'rollback', hint: 'Volver a un punto anterior de la conversación', run: () => setRewindOpen(true) },
       {
         name: 'monthly',
-        hint: '[AAAA-MM]: uso del mes en curso (un mes concreto aún no está disponible)',
+        hint: '[AAAA-MM]: uso del mes en curso o de un mes anterior',
         run: (arg) => {
           const month = arg.trim();
           if (!month) {
+            setMonthlyMonth(undefined);
             setMonthlyOpen((o) => !o);
             return;
           }
@@ -103,9 +105,9 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
             setError(`Formato no válido: "${month}". Usa AAAA-MM, por ejemplo 2026-10.`);
             return;
           }
-          // El endpoint /usage/dashboard solo acepta today | week | month.
           setInfo(null);
-          setError(`El daemon no permite elegir ${month}. Se muestra el mes en curso (últimos 30 días).`);
+          setError(null);
+          setMonthlyMonth(month);
           setMonthlyOpen(true);
         },
       },
@@ -143,7 +145,7 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
             return;
           }
           void workspaceActions
-            .setWorkspaceSetting('workspace', 'general.outputStyle', style === 'default' ? null : style)
+            .setWorkspaceSetting('workspace', 'general.outputStyle', style)
             .then(() => report(`Estilo de salida: ${style}. Se aplica al reiniciar el daemon.`), fail);
         },
       },
@@ -214,7 +216,7 @@ function ChatBody({ onSessionCreated, onNewChat }: Omit<Props, 'sessionId'>) {
       )}
 
       {rewindOpen && <RewindSheet onClose={() => setRewindOpen(false)} onResult={report} />}
-      {monthlyOpen && <MonthlyCard onClose={() => setMonthlyOpen(false)} />}
+      {monthlyOpen && <MonthlyCard key={monthlyMonth ?? 'current'} month={monthlyMonth} onClose={() => { setMonthlyOpen(false); setMonthlyMonth(undefined); }} />}
 
       {helpOpen && (
         <div className="card help">
