@@ -21,7 +21,15 @@ No se aplican automáticamente: son el registro del cambio para llevarlo al fork
   - `tools.approvalMode` → `disallowed_key` (sin cambios).
 - Desde la Web Shell: `/output-style Concise` y `/collapse-on-resume` muestran el aviso de éxito.
 
+### Estado de compilación
+
+- El parche se aplica limpiamente sobre `v0.28.0` (`git apply`, sin conflictos).
+- Verificación de sintaxis: el archivo modificado transpila con esbuild y la lista contiene ambas claves.
+- Compilación completa del monorepo: **no completada en este entorno**. `pnpm install --ignore-scripts` funciona,
+  pero `tsc --build` de `packages/core` se queda sin memoria (heap de 3 GB y 4 GB de RAM totales).
+  Hace falta un entorno con más memoria (p. ej. un runner de CI con 8 GB o más) para compilar el daemon.
+
 ### Pendiente
 
-- Aplicar el parche sobre el código fuente del fork y compilar el paquete del daemon.
+- Compilar el paquete del daemon en un entorno con más memoria y probar `/expand-on-resume` contra ese daemon.
 - Abrir PR en upstream, o mantenerlo en el fork de qwen-code.
