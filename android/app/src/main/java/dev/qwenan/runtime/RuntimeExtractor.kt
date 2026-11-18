@@ -32,6 +32,13 @@ object RuntimeExtractor {
                                 out.delete()
                                 Files.createSymbolicLink(out.toPath(), Paths.get(entry.linkName))
                             }
+                            entry.isLink -> {
+                                // Enlace duro: el destino debe existir dentro del mismo árbol.
+                                val target = resolveSafe(root, entry.linkName)
+                                out.parentFile.mkdirs()
+                                out.delete()
+                                Files.createLink(out.toPath(), target.toPath())
+                            }
                             entry.isFile -> {
                                 out.parentFile.mkdirs()
                                 FileOutputStream(out).use { tar.copyTo(it, 1 shl 16) }
@@ -39,13 +46,6 @@ object RuntimeExtractor {
                                 out.setExecutable(executable, false)
                                 out.setReadable(true, false)
                                 out.setWritable(true, true)
-                            }
-                            entry.isLink -> {
-                                // Enlace duro: el destino debe existir dentro del mismo árbol.
-                                val target = resolveSafe(root, entry.linkName)
-                                out.parentFile.mkdirs()
-                                out.delete()
-                                Files.createLink(out.toPath(), target.toPath())
                             }
                             entry.isCharacterDevice || entry.isBlockDevice || entry.isFIFO -> {
                                 // Nodos de dispositivo y FIFOs no sirven fuera de un sistema real: se omiten.
