@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.LinearLayout
@@ -48,8 +50,10 @@ class MainActivity : Activity() {
             visibility = View.GONE
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            // La Web Shell (https de appassets) habla con el daemon en http://127.0.0.1: solo loopback.
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             webViewClient = object : WebViewClient() {
-                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest) =
+                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
                     assetLoader.shouldInterceptRequest(request.url)
 
                 override fun onPageFinished(view: WebView, url: String) {
