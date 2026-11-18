@@ -52,8 +52,6 @@ object ProotCommand {
 
         val env = mapOf(
             "PROOT_TMP_DIR" to config.tmpDir.path,
-            // Sin sandbox del kernel: bwrap y Landlock no funcionan dentro de proot (ver android/PLAN.md).
-            "QWENAN_SANDBOX" to "off",
         )
         return ProotLaunch(args, env, config.tmpDir)
     }

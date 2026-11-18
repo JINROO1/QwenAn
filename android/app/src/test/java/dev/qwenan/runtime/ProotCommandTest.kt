@@ -42,10 +42,9 @@ class ProotCommandTest {
     }
 
     @Test
-    fun setsTmpDirAndSandboxOff() {
+    fun setsTmpDir() {
         val l = ProotCommand.build(cfg, listOf("/bin/true"))
         assertEquals("/data/data/dev.qwenan/cache/proot", l.env["PROOT_TMP_DIR"])
-        assertEquals("off", l.env["QWENAN_SANDBOX"])
         assertEquals(cfg.tmpDir, l.workDir)
     }
 
