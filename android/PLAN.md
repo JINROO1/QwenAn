@@ -199,4 +199,5 @@ Workflow `android-download-check.yml`, ejecución `44291638879` `success`, sin t
 - `RuntimeDownloader.kt`: descarga anónima de fragmentos con reanudación `Range`, SHA-256 por fragmento, reintentos con espera creciente, y descarte de fragmentos corruptos de tamaño completo.
 - Tests JVM (5): descarga completa, reanudación desde parcial, parcial corrupto, reintento tras 503, fallo tras agotar intentos. Servidor HTTP mínimo en el propio test.
 - Workflow `android-app.yml`: `testDebugUnitTest` + `assembleDebug`, APK como artefacto. Run `44293282743` `success`.
-- Pendiente: lanzador de proot, WebView real, selector de workspace, instalación del runtime desde el manifest.
+- `RuntimeInstaller.kt`: lee `manifest.json`, descarga los fragmentos, los reensambla y verifica el archivo final. Es idempotente: un asset ya válido no se vuelve a bajar. Tests (4): instalación completa, segunda instalación sin descargas, reinstalación si el archivo está corrupto y fallo si el SHA-256 final no coincide. Run `44295515528` `success`.
+- Pendiente: extraer los `.tar.zst` (requiere zstd y tar en Android), lanzador de proot (binario arm64 aún no elegido), WebView real y selector de workspace.
