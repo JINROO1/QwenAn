@@ -18,6 +18,26 @@ permissions:
   contents: read
 
 jobs:
+  rootfs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Register arm64 emulation (binfmt)
+        run: docker run --privileged --rm tonistiigi/binfmt --install arm64
+
+      - name: Build and verify rootfs
+        run: bash .github/rootfs/build-rootfs.sh "$RUNNER_TEMP/rootfs-out"
+
+      - name: Upload rootfs fragments and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwenan-rootfs-arm64
+          path: ${{ runner.temp }}/rootfs-out/
+          retention-days: 14
+          if-no-files-found: error
+
   assets:
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -43,9 +63,9 @@ jobs:
           if-no-files-found: error
 
   release:
-    # Solo manual: publica los fragmentos y el manifest como pre-release del repo.
+    # Solo manual: publica en el pre-release los fragmentos de runtime y rootfs, y un manifest fusionado.
     if: github.event_name == 'workflow_dispatch'
-    needs: assets
+    needs: [assets, rootfs]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -61,14 +81,26 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: qwenan-assets-arm64
-          path: assets
+          path: dl/assets
 
-      - name: Create or update pre-release ${{ env.TAG }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: qwenan-rootfs-arm64
+          path: dl/rootfs
+
+      - name: Preparar publicación (fragmentos y manifest fusionado)
+        run: |
+          set -euo pipefail
+          mkdir -p publish
+          cp dl/assets/*.part-* dl/rootfs/*.part-* publish/
+          python3 .github/assets/merge-manifest.py publish/manifest.json dl/assets/manifest.json dl/rootfs/manifest.json
+          echo "::notice::publicación: $(ls publish | wc -l) archivos"
+
+      - name: Crear o actualizar pre-release ${{ env.TAG }}
         run: |
           set -uo pipefail
-          rm -f assets/chunk.py
-          FILES=$(find assets -maxdepth 1 -type f | sort)
-          echo "::notice::archivos a publicar: $(echo "$FILES" | wc -l)"
+          cd publish
+          FILES=$(ls -1)
           if gh release view "$TAG" >/dev/null 2>&1; then
             MODE=upload; RC=0
             OUT=$(gh release upload "$TAG" $FILES --clobber 2>&1) || RC=$?
@@ -76,7 +108,7 @@ jobs:
             MODE=create; RC=0
             OUT=$(gh release create "$TAG" $FILES --target "$GITHUB_SHA" --prerelease \
               --title "Runtime Android arm64 v1" \
-              --notes "Node 26.13.1 linux-arm64 y Qwen Code v0.28.0 con parches 0001 y 0002. Fragmentos de 64 MiB con SHA-256 en manifest.json." 2>&1) || RC=$?
+              --notes "Node 26.13.1, Qwen Code v0.28.0 con parches 0001 y 0002, y rootfs Ubuntu noble arm64. Fragmentos de 64 MiB con SHA-256 en manifest.json." 2>&1) || RC=$?
           fi
           if [ "$RC" -ne 0 ]; then
             echo "::error::$MODE de $TAG falló (rc=$RC): $(echo "$OUT" | tr '\n' ' ' | cut -c1-900)"
