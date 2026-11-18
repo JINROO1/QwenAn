@@ -89,7 +89,12 @@ RESULT=$(docker run --rm --platform linux/arm64 -v "$WORK/reassembled:/assets:ro
   code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:4170/health || true)
   kill $PID 2>/dev/null || true
   echo "RESULT node=$NODEV arch=$ARCH health=$code"
-  if [ "$code" != "200" ]; then echo "SERVE_LOG $(tail -n 8 /tmp/serve.log | tr '\n' ' ')"; exit 1; fi
-') || { echo "::error::verificación falló: $RESULT"; exit 1; }
+  if [ "$code" != "200" ]; then echo "SERVE_LOG $(tail -n 8 /tmp/serve.log | tr '\n' ' ')"; fi
+  exit 0
+') || true
+case "$RESULT" in
+  *"health=200"*) echo "::notice::verificación OK: $RESULT" ;;
+  *) echo "::error::verificación falló: $RESULT"; exit 1 ;;
+esac
 echo "::notice::$(cat "$WORK/reassembly.txt" | tr '\n' ' ') $RESULT"
 
