@@ -61,15 +61,23 @@ jobs:
 
       - name: Create or update pre-release ${{ env.TAG }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           cd assets
           rm -f chunk.py
-          ls -1 | sed 's/^/::notice::asset /' >/dev/null
+          FILES=$(find . -maxdepth 1 -type f -printf '%f\n' | sort)
+          echo "::notice::archivos a publicar: $(echo "$FILES" | wc -l)"
+          gh --version | head -1
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" * --clobber
+            MODE=upload
+            OUT=$(cd . && gh release upload "$TAG" $FILES --clobber 2>&1); RC=$?
           else
-            gh release create "$TAG" * --prerelease \
+            MODE=create
+            OUT=$(gh release create "$TAG" $FILES --target "$GITHUB_SHA" --prerelease \
               --title "Runtime Android arm64 v1" \
-              --notes "Node 26.13.1 linux-arm64 y Qwen Code v0.28.0 con parches 0001 y 0002. Fragmentos de 64 MiB con SHA-256 en manifest.json."
+              --notes "Node 26.13.1 linux-arm64 y Qwen Code v0.28.0 con parches 0001 y 0002. Fragmentos de 64 MiB con SHA-256 en manifest.json." 2>&1); RC=$?
           fi
-          echo "::notice::release $TAG publicada: $(gh release view "$TAG" --json assets -q '.assets | length') archivos"
+          if [ "$RC" -ne 0 ]; then
+            echo "::error::$MODE de $TAG falló (rc=$RC): $(echo "$OUT" | tr '\n' ' ' | cut -c1-900)"
+            exit 1
+          fi
+          echo "::notice::release $TAG ($MODE) OK: $(gh release view "$TAG" --json assets -q '.assets | length' 2>/dev/null) archivos"
