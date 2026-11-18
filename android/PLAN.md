@@ -208,3 +208,16 @@ Workflow `android-download-check.yml`, ejecución `44291638879` `success`, sin t
 - `ProotCommand.kt`: construye la línea de proot (`-r`, `-0`, `--link2symlink`, `--kill-on-exit`, binds de `/dev`, `/proc`, `/sys` y del workspace en `/workspace`, `PROOT_TMP_DIR`). Sin shell. Tests (4) en JVM.
 - Pendiente de validar en dispositivo: que proot necesite el loader aparte (`PROOT_LOADER`); el build actual solo genera `proot`. Y ptrace.
 - Pendiente: WebView real, selector de workspace y el lanzador que ejecuta `qwen serve`.
+
+## Estado: APK de prueba para dispositivo
+
+- APK debug publicado en la pre-release `app-test` (9 434 115 B): https://github.com/JINROO1/QwenAn/releases/download/app-test/qwenan-debug.apk . Run `44309345688` `success`.
+- `libproot.so` (sha256 `9a4f9da7…c9071`) está en la release `runtime-v1`. El build lo descarga y verifica por SHA-256 (`app/build.gradle.kts`); no hay binarios en Git.
+- Flujo de primer arranque (`MainActivity`): manifest → fragmentos verificados → extracción de rootfs, Node y Qwen Code → `qwen serve` dentro de proot con `--allow-origin https://appassets.androidplatform.net` → espera a `/health` → Web Shell desde los assets del APK, con la conexión (`qwenan.daemon.v1`) preconfigurada.
+- Bugs corregidos en el camino: `commons-compress` marca los enlaces duros como `isFile()`; ahora se comprueban antes y se crean como enlaces.
+
+Pruebas pendientes en dispositivo (no verificables en CI):
+1. Si Android permite ejecutar `node` dentro de `filesDir` (exec desde datos de la app con `targetSdk 34`). Si falla, habrá que mover el runtime o revisar `targetSdk`.
+2. Si proot necesita el loader aparte (`PROOT_LOADER`). El build solo genera `proot`.
+3. ptrace dentro del teléfono (`proot -r <rootfs> /bin/uname -m` → `aarch64`).
+4. Tiempo del primer arranque: descarga ~310 MB + rootfs 93 MB y extracción.
