@@ -11,7 +11,7 @@ on:
       - '.github/workflows/android-proot.yml'
 
 permissions:
-  contents: read
+  contents: write # solo para subir libproot.so a la release runtime-v1 (manual)
 
 jobs:
   build:
@@ -39,6 +39,21 @@ jobs:
           grep '^::' "$RUNNER_TEMP/build.log" || true
           echo "::notice::proot arm64 estático OK"
           cp "$RUNNER_TEMP/out/proot" "$RUNNER_TEMP/out/libproot.so"
+
+      - name: Subir libproot.so a la release runtime-v1 (solo manual)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          RC=0
+          OUT=$(gh release upload runtime-v1 "$RUNNER_TEMP/out/libproot.so" --clobber 2>&1) || RC=$?
+          if [ "$RC" -ne 0 ]; then
+            echo "::error::subida a runtime-v1 falló (rc=$RC): $(echo "$OUT" | tr '\n' ' ' | cut -c1-600)"
+            exit 1
+          fi
+          SHA=$(sha256sum "$RUNNER_TEMP/out/libproot.so" | cut -d' ' -f1)
+          echo "::notice::libproot.so publicado en runtime-v1, sha256 $SHA"
 
       - uses: actions/upload-artifact@v4
         with:
