@@ -53,3 +53,17 @@ class ProotCommandTest {
         ProotCommand.build(cfg, emptyList())
     }
 }
+
+class ServeCommandTest {
+    @Test
+    fun servesOnLoopbackWithToken() {
+        val args = ServeCommand.build("tok123", "/workspace")
+        assertEquals("/opt/qwen/node/bin/node", args[0])
+        assertEquals("/opt/qwen/src/packages/cli/dist/index.js", args[1])
+        assertEquals("serve", args[2])
+        assertEquals("127.0.0.1", args[args.indexOf("--hostname") + 1])
+        assertEquals("4170", args[args.indexOf("--port") + 1])
+        assertEquals("tok123", args[args.indexOf("--token") + 1])
+        assertEquals("/workspace", args[args.indexOf("--workspace") + 1])
+    }
+}

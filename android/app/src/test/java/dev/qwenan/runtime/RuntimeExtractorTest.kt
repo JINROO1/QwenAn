@@ -57,6 +57,20 @@ class RuntimeExtractorTest {
     }
 
     @Test
+    fun extractsHardLinks() {
+        val archive = makeArchive { tar ->
+            tar.file("usr/bin/tool", "T".toByteArray(), 0x1ed)
+            val e = TarArchiveEntry("usr/bin/tool2", TarArchiveEntry.LF_LINK)
+            e.linkName = "usr/bin/tool"
+            tar.putArchiveEntry(e)
+            tar.closeArchiveEntry()
+        }
+        val dest = Files.createTempDirectory("ext").toFile()
+        RuntimeExtractor.extract(archive, dest)
+        assertEquals("T", File(dest, "usr/bin/tool2").readText())
+    }
+
+    @Test
     fun rejectsPathTraversal() {
         val archive = makeArchive { tar -> tar.file("../escape.txt", "x".toByteArray(), 0x1a4) }
         val dest = Files.createTempDirectory("ext").toFile()
