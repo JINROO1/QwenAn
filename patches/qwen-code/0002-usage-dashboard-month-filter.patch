@@ -1,0 +1,137 @@
+diff --git a/packages/cli/src/serve/routes/usage-stats.ts b/packages/cli/src/serve/routes/usage-stats.ts
+index 594bb6a9..cb1891dc 100644
+--- a/packages/cli/src/serve/routes/usage-stats.ts
++++ b/packages/cli/src/serve/routes/usage-stats.ts
+@@ -57,6 +57,14 @@ function parseRange(raw: unknown): UsageRange {
+     : 'today';
+ }
+ 
++/** `?month=YYYY-MM`: undefined when absent; `null` when present but invalid. */
++function parseMonth(raw: unknown): string | undefined | null {
++  if (raw === undefined) return undefined;
++  return typeof raw === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(raw)
++    ? raw
++    : null;
++}
++
+ /** Parse + clamp `?heatmapDays=`; anything invalid falls back to the default. */
+ function parseHeatmapDays(raw: unknown): number {
+   if (typeof raw !== 'string' || !/^\d+$/.test(raw)) {
+@@ -108,9 +116,21 @@ export function registerUsageStatsRoutes(
+   app.get('/usage/dashboard', async (req, res) => {
+     const range = parseRange(req.query['range']);
+     const heatmapDays = parseHeatmapDays(req.query['heatmapDays']);
++    const month = parseMonth(req.query['month']);
++    if (month === null) {
++      res.status(400).json({
++        error: 'month must be YYYY-MM',
++        code: 'invalid_month',
++      });
++      return;
++    }
+     try {
+       const records = await getRecords();
+-      const dashboard = buildUsageDashboard(records, { range, heatmapDays });
++      const dashboard = buildUsageDashboard(records, {
++        range,
++        heatmapDays,
++        month,
++      });
+       res.status(200).json(dashboard);
+     } catch (err) {
+       writeStderrLine(
+diff --git a/packages/core/src/services/usage-dashboard-service.ts b/packages/core/src/services/usage-dashboard-service.ts
+index 385b5289..8e87ad23 100644
+--- a/packages/core/src/services/usage-dashboard-service.ts
++++ b/packages/core/src/services/usage-dashboard-service.ts
+@@ -74,6 +74,8 @@ export interface UsageDashboard {
+   generatedAt: string;
+   /** The range these totals cover; the heatmap below is always ~6 months. */
+   range: TimeRange;
++  /** Calendar month (`YYYY-MM`, local time) when the dashboard is scoped to one. */
++  month?: string;
+   summary: UsageDashboardTotals;
+   /** Per-model token share for the range, sorted by tokens desc. */
+   models: UsageModelShare[];
+@@ -89,10 +91,29 @@ export interface UsageDashboard {
+ export interface LoadUsageDashboardOptions {
+   /** Aggregation window for the summary totals. Defaults to `today`. */
+   range?: TimeRange;
++  /**
++   * Calendar month `YYYY-MM` (local time). When set, the summary and the daily
++   * series cover that month and `range` is ignored. The heatmap is unchanged.
++   */
++  month?: string;
+   /** Trailing days covered by the heatmap. Defaults to ~6 months. */
+   heatmapDays?: number;
+ }
+ 
++/** Local-time bounds `[start, end)` of a `YYYY-MM` month, or undefined when invalid. */
++export function monthBounds(
++  month: string,
++): { start: Date; end: Date } | undefined {
++  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(month);
++  if (!match) return undefined;
++  const year = Number(match[1]);
++  const monthIndex = Number(match[2]) - 1;
++  return {
++    start: new Date(year, monthIndex, 1),
++    end: new Date(year, monthIndex + 1, 1),
++  };
++}
++
+ function modelTokens(m: {
+   totalTokens: number;
+   inputTokens: number;
+@@ -196,13 +217,21 @@ export function buildUsageDashboard(
+   records: UsageSummaryRecord[],
+   options: LoadUsageDashboardOptions = {},
+ ): UsageDashboard {
+-  const range: TimeRange = options.range ?? 'today';
++  const bounds = options.month ? monthBounds(options.month) : undefined;
++  const range: TimeRange = bounds ? 'month' : (options.range ?? 'today');
+   const heatmapDays =
+     options.heatmapDays && options.heatmapDays > 0
+       ? Math.floor(options.heatmapDays)
+       : DEFAULT_HEATMAP_DAYS;
+ 
+-  const report = aggregateUsage(records, range);
++  const scoped = bounds
++    ? records.filter(
++        (r) =>
++          r.timestamp >= bounds.start.getTime() &&
++          r.timestamp < bounds.end.getTime(),
++      )
++    : records;
++  const report = aggregateUsage(scoped, bounds ? 'all' : range);
+ 
+   let inputTokens = 0;
+   let outputTokens = 0;
+@@ -247,11 +276,14 @@ export function buildUsageDashboard(
+     count: s.count,
+   }));
+ 
+-  const dailyStart = Math.max(
+-    getTimeRangeBounds(range).start.getTime(),
+-    now - MAX_DAILY_DAYS * MS_PER_DAY,
+-  );
+-  const daily = buildDaily(records, dailyStart, now);
++  const dailyStart = bounds
++    ? bounds.start.getTime()
++    : Math.max(
++        getTimeRangeBounds(range).start.getTime(),
++        now - MAX_DAILY_DAYS * MS_PER_DAY,
++      );
++  const dailyEnd = bounds ? Math.min(bounds.end.getTime() - 1, now) : now;
++  const daily = buildDaily(records, dailyStart, dailyEnd);
+ 
+   // The heatmap covers the trailing `heatmapDays` (~12 months in the UI),
+   // independent of `range`.
+@@ -264,6 +296,7 @@ export function buildUsageDashboard(
+   return {
+     generatedAt: new Date(now).toISOString(),
+     range,
++    ...(bounds ? { month: options.month } : {}),
+     summary,
+     models,
+     skills,
