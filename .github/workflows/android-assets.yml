@@ -41,3 +41,35 @@ jobs:
           path: ${{ runner.temp }}/assets-out/
           retention-days: 14
           if-no-files-found: error
+
+  release:
+    # Solo manual: publica los fragmentos y el manifest como pre-release del repo.
+    if: github.event_name == 'workflow_dispatch'
+    needs: assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: runtime-v1
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: qwenan-assets-arm64
+          path: assets
+
+      - name: Create or update pre-release ${{ env.TAG }}
+        run: |
+          set -euo pipefail
+          cd assets
+          rm -f chunk.py
+          ls -1 | sed 's/^/::notice::asset /' >/dev/null
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" * --clobber
+          else
+            gh release create "$TAG" * --prerelease \
+              --title "Runtime Android arm64 v1" \
+              --notes "Node 26.13.1 linux-arm64 y Qwen Code v0.28.0 con parches 0001 y 0002. Fragmentos de 64 MiB con SHA-256 en manifest.json."
+          fi
+          echo "::notice::release $TAG publicada: $(gh release view "$TAG" --json assets -q '.assets | length') archivos"
