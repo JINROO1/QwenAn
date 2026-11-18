@@ -1,0 +1,51 @@
+name: android-app
+
+# Compila la app Android (debug) y ejecuta los unit tests del descargador.
+# El APK se publica como artefacto de Actions; la distribución es personal (no Play).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/e2e27cb5-qwenan]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-app.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Tests unitarios y APK debug
+        working-directory: android
+        run: |
+          set -uo pipefail
+          RC=0
+          gradle --no-daemon testDebugUnitTest assembleDebug || RC=$?
+          if [ "$RC" -ne 0 ]; then
+            echo "::error::build o tests Android fallaron (rc=$RC)"
+            exit 1
+          fi
+          echo "::notice::APK debug y tests OK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qwenan-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
