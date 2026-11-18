@@ -139,6 +139,17 @@ Workflow `.github/workflows/android-rootfs.yml`, ejecución `success`:
 
 Limitación: los artefactos caducan (14 días) y su descarga exige autenticación de GitHub. Para el teléfono hará falta una publicación estable (release privada con token en la app, que es aceptable porque la app es personal).
 
+## Estado: assets de runtime (verificado en CI)
+
+Workflow `.github/workflows/android-assets.yml`, ejecución `success` (`44207836040`):
+
+- `node-26.13.1-linux-arm64.tar.zst`: 37,5 MB, 1 fragmento. Verificado con `SHASUMS256.txt`.
+- `qwen-code-0.28.0-linux-arm64.tar.zst`: 273 MB, 5 fragmentos. Bundle v0.28.0 con parches 0001 y 0002, dependencias de producción instaladas en arm64.
+- `manifest.json` con SHA-256 del archivo y de cada fragmento (64 MiB).
+- Verificación: reensamblado desde fragmentos (SHA-256 correcto) y arranque de `qwen serve` con el Node empaquetado dentro de la distro: `node v26.13.1`, `aarch64`, `GET /health` → 200.
+
+Tamaño total comprimido de runtime (sin contar el rootfs de ~93 MB): ~310 MB. El tamaño descomprimido aún no está medido.
+
 ## Próximos pasos inmediatos
 
 1. ~~Validar `qwen serve` dentro del mismo contenedor glibc~~ (hecho, ver arriba). Siguiente: nativos (`pnpm rebuild sharp @lydell/node-pty`) en arm64.
