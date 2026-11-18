@@ -25,6 +25,7 @@ jobs:
       - name: Descarga anónima y verificación
         run: |
           set -uo pipefail
+          export CUT_AFTER=5000000   # fuerza un corte en el primer fragmento para probar Range
           OUT="$RUNNER_TEMP/runtime-v1"
           RC=0
           python3 .github/download/verify-release.py \

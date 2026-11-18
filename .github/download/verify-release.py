@@ -9,6 +9,9 @@ import hashlib, json, os, sys, time, urllib.request, urllib.error
 BASE = sys.argv[1].rstrip('/')
 OUT = sys.argv[2]
 RETRIES = 6
+# Prueba de reanudación: si CUT_AFTER > 0, el primer intento del primer fragmento se corta tras CUT_AFTER bytes.
+CUT_AFTER = int(os.environ.get('CUT_AFTER', '0') or 0)
+_cut_done = False
 os.makedirs(OUT, exist_ok=True)
 
 
@@ -48,12 +51,23 @@ def fetch(name, dest, expected_size, expected_sha):
                 mode = 'ab' if (status == 206 and have > 0) else 'wb'
                 if mode == 'wb':
                     have = 0
+                global _cut_done
                 with open(dest, mode) as f:
+                    written = 0
                     while True:
                         block = resp.read(1 << 20)
                         if not block:
                             break
+                        if CUT_AFTER and not _cut_done and have + written + len(block) > CUT_AFTER:
+                            keep = CUT_AFTER - (have + written)
+                            f.write(block[:keep])
+                            f.flush()
+                            _cut_done = True
+                            raise OSError(f'corte simulado tras {CUT_AFTER} bytes')
                         f.write(block)
+                        written += len(block)
+                if mode == 'ab':
+                    notice(f"reanudado {name} desde byte {have} (HTTP {status})")
         except (urllib.error.URLError, OSError) as e:
             print(f"reintento {attempt} para {name}: {e}", flush=True)
             time.sleep(min(2 ** attempt, 30))
