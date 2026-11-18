@@ -1,0 +1,46 @@
+name: android-proot
+
+# Compila proot estático arm64 (para jniLibs) y prueba ptrace dentro de ubuntu:noble arm64.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/e2e27cb5-qwenan]
+    paths:
+      - '.github/proot/**'
+      - '.github/workflows/android-proot.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Registrar emulación arm64
+        run: docker run --privileged --rm tonistiigi/binfmt --install arm64
+
+      - name: Compilar proot estático y probarlo
+        run: |
+          set -uo pipefail
+          mkdir -p "$RUNNER_TEMP/out"
+          RC=0
+          docker run --rm --platform linux/arm64 \
+            -v "$PWD/.github/proot:/work:ro" -v "$RUNNER_TEMP/out:/out" \
+            --security-opt seccomp=unconfined \
+            -e PROOT_TAG=v5.5.0 ubuntu:noble bash /work/build-proot.sh || RC=$?
+          if [ "$RC" -ne 0 ]; then
+            echo "::error::build o prueba de proot falló (rc=$RC)"
+            exit 1
+          fi
+          echo "::notice::proot arm64 estático OK"
+          cp "$RUNNER_TEMP/out/proot" "$RUNNER_TEMP/out/libproot.so"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qwenan-proot-arm64
+          path: ${{ runner.temp }}/out/libproot.so
+          retention-days: 7
