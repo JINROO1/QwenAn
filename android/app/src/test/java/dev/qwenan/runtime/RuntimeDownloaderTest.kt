@@ -137,7 +137,7 @@ class RuntimeDownloaderTest {
     }
 
     private fun sha(bytes: ByteArray): String {
-        val f = File.createTempFile("p", ".bin")
+        val f = File.createTempFile("payload", ".bin")
         f.writeBytes(bytes)
         return RuntimeDownloader.sha256(f)
     }
