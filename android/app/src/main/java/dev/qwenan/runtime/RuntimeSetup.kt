@@ -80,12 +80,15 @@ object ServeCommand {
     const val NODE = "/opt/qwen/node/bin/node"
     const val CLI = "/opt/qwen/src/packages/cli/dist/index.js"
     const val PORT = 4170
+    /** Origen con el que la WebView sirve la interfaz desde los assets del APK. */
+    const val UI_ORIGIN = "https://appassets.androidplatform.net"
 
     fun build(token: String, workspaceGuest: String): List<String> = listOf(
         NODE, CLI, "serve",
         "--port", PORT.toString(),
         "--hostname", "127.0.0.1",
         "--token", token,
+        "--allow-origin", UI_ORIGIN,
         "--workspace", workspaceGuest,
     )
 }

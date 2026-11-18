@@ -65,5 +65,6 @@ class ServeCommandTest {
         assertEquals("4170", args[args.indexOf("--port") + 1])
         assertEquals("tok123", args[args.indexOf("--token") + 1])
         assertEquals("/workspace", args[args.indexOf("--workspace") + 1])
+        assertEquals("https://appassets.androidplatform.net", args[args.indexOf("--allow-origin") + 1])
     }
 }
