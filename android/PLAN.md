@@ -176,3 +176,9 @@ No verificado todavía:
 - Envío de prompts y permisos de extremo a extremo (requiere credenciales de modelo).
 
 Siguientes pasos: cubrir el resto de bloques y pantallas de la Web Shell original (ver `webshell/README.md`), dividir el bundle, y pruebas visuales móviles en CI.
+
+## Estado de publicación (paso 3 completado)
+
+- Job `release` de `android-assets.yml` (manual): crea o actualiza el pre-release `runtime-v1` con los 7 archivos (manifest y fragmentos). Verificado en run `44225979023`: release creada.
+- Descarga anónima (`github.com/JINROO1/QwenAn/releases/download/runtime-v1/...`): 404 mientras el repo sea privado. Con repo privado, la app necesita un token de solo lectura limitado a este repo. Si el repo pasa a público, no hace falta token.
+- Decisión pendiente del usuario: visibilidad del repo.
