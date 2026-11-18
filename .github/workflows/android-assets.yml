@@ -68,13 +68,13 @@ jobs:
           echo "::notice::archivos a publicar: $(echo "$FILES" | wc -l)"
           gh --version | head -1
           if gh release view "$TAG" >/dev/null 2>&1; then
-            MODE=upload
-            OUT=$(cd . && gh release upload "$TAG" $FILES --clobber 2>&1); RC=$?
+            MODE=upload; RC=0
+            OUT=$(gh release upload "$TAG" $FILES --clobber 2>&1) || RC=$?
           else
-            MODE=create
+            MODE=create; RC=0
             OUT=$(gh release create "$TAG" $FILES --target "$GITHUB_SHA" --prerelease \
               --title "Runtime Android arm64 v1" \
-              --notes "Node 26.13.1 linux-arm64 y Qwen Code v0.28.0 con parches 0001 y 0002. Fragmentos de 64 MiB con SHA-256 en manifest.json." 2>&1); RC=$?
+              --notes "Node 26.13.1 linux-arm64 y Qwen Code v0.28.0 con parches 0001 y 0002. Fragmentos de 64 MiB con SHA-256 en manifest.json." 2>&1) || RC=$?
           fi
           if [ "$RC" -ne 0 ]; then
             echo "::error::$MODE de $TAG falló (rc=$RC): $(echo "$OUT" | tr '\n' ' ' | cut -c1-900)"
