@@ -182,3 +182,13 @@ Siguientes pasos: cubrir el resto de bloques y pantallas de la Web Shell origina
 - Job `release` de `android-assets.yml` (manual): crea o actualiza el pre-release `runtime-v1` con los 7 archivos (manifest y fragmentos). Verificado en run `44225979023`: release creada.
 - Descarga anónima (`github.com/JINROO1/QwenAn/releases/download/runtime-v1/...`): 404 mientras el repo era privado; con el repo público responde 302.
 - Decisión del usuario: repo público. La descarga anónima de `runtime-v1` responde 302 (antes 404). La app no necesita token.
+
+## Estado: descarga anónima verificada (CI)
+
+Workflow `android-download-check.yml`, ejecución `44291638879` `success`, sin token:
+
+- `manifest.json` y los 6 fragmentos descargados de `releases/download/runtime-v1`.
+- SHA-256 por fragmento comprobado antes de aceptarlo. Reensamblado y SHA-256 del archivo completo:
+  - `node-26.13.1-linux-arm64.tar.zst`: 37 505 875 B, OK.
+  - `qwen-code-0.28.0-linux-arm64.tar.zst`: 273 152 028 B, 5 fragmentos, OK.
+- La lógica de `.github/download/verify-release.py` (reanudación con `Range` y reintentos) es la referencia para el descargador de la app. La reanudación real no se ha probado: no se inyectó ningún corte.
