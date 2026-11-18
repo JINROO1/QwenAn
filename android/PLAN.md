@@ -191,4 +191,4 @@ Workflow `android-download-check.yml`, ejecución `44291638879` `success`, sin t
 - SHA-256 por fragmento comprobado antes de aceptarlo. Reensamblado y SHA-256 del archivo completo:
   - `node-26.13.1-linux-arm64.tar.zst`: 37 505 875 B, OK.
   - `qwen-code-0.28.0-linux-arm64.tar.zst`: 273 152 028 B, 5 fragmentos, OK.
-- La lógica de `.github/download/verify-release.py` (reanudación con `Range` y reintentos) es la referencia para el descargador de la app. La reanudación real no se ha probado: no se inyectó ningún corte.
+- La lógica de `.github/download/verify-release.py` (reanudación con `Range` y reintentos) es la referencia para el descargador de la app. Reanudación probada (run `44291999922`): corte simulado a 5 000 000 B en el primer fragmento; el reintento usó `Range` y recibió HTTP 206 desde ese byte, y el fragmento verificó su SHA-256. Los 6 fragmentos y ambos archivos pasaron la verificación.
