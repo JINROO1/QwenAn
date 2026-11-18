@@ -192,3 +192,11 @@ Workflow `android-download-check.yml`, ejecución `44291638879` `success`, sin t
   - `node-26.13.1-linux-arm64.tar.zst`: 37 505 875 B, OK.
   - `qwen-code-0.28.0-linux-arm64.tar.zst`: 273 152 028 B, 5 fragmentos, OK.
 - La lógica de `.github/download/verify-release.py` (reanudación con `Range` y reintentos) es la referencia para el descargador de la app. Reanudación probada (run `44291999922`): corte simulado a 5 000 000 B en el primer fragmento; el reintento usó `Range` y recibió HTTP 206 desde ese byte, y el fragmento verificó su SHA-256. Los 6 fragmentos y ambos archivos pasaron la verificación.
+
+## Estado: proyecto Android mínimo (CI)
+
+- `android/` es un proyecto Gradle (Kotlin, `minSdk 29`, `targetSdk 34`, paquete `dev.qwenan`). Pantalla provisional (`MainActivity`).
+- `RuntimeDownloader.kt`: descarga anónima de fragmentos con reanudación `Range`, SHA-256 por fragmento, reintentos con espera creciente, y descarte de fragmentos corruptos de tamaño completo.
+- Tests JVM (5): descarga completa, reanudación desde parcial, parcial corrupto, reintento tras 503, fallo tras agotar intentos. Servidor HTTP mínimo en el propio test.
+- Workflow `android-app.yml`: `testDebugUnitTest` + `assembleDebug`, APK como artefacto. Run `44293282743` `success`.
+- Pendiente: lanzador de proot, WebView real, selector de workspace, instalación del runtime desde el manifest.
