@@ -31,11 +31,12 @@ jobs:
           docker run --rm --platform linux/arm64 \
             -v "$PWD/.github/proot:/work:ro" -v "$RUNNER_TEMP/out:/out" \
             --security-opt seccomp=unconfined \
-            -e PROOT_TAG=v5.5.0 ubuntu:noble bash /work/build-proot.sh || RC=$?
+            -e PROOT_TAG=v5.5.0 ubuntu:noble bash /work/build-proot.sh >"$RUNNER_TEMP/build.log" 2>&1 || RC=$?
           if [ "$RC" -ne 0 ]; then
-            echo "::error::build o prueba de proot falló (rc=$RC)"
+            echo "::error::build o prueba de proot falló (rc=$RC): $(grep -v '^$' "$RUNNER_TEMP/build.log" | tail -n 12 | tr '\n' ' ' | tail -c 900)"
             exit 1
           fi
+          grep '^::' "$RUNNER_TEMP/build.log" || true
           echo "::notice::proot arm64 estático OK"
           cp "$RUNNER_TEMP/out/proot" "$RUNNER_TEMP/out/libproot.so"
 
