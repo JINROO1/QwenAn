@@ -22,7 +22,7 @@ mkdir -p /out
 cp proot /out/proot
 # Prueba de humo: el binario arranca y responde. ptrace NO se prueba aquí: bajo emulación
 # qemu-user devuelve ENOSYS. ptrace se valida en un dispositivo Android real.
-VERSION="$(/out/proot --version 2>&1 | head -n 1 || true)"
-echo "::notice::proot ${TAG} estático arm64; versión: ${VERSION}"
-case "$VERSION" in *proot*) ;; *) echo "::error::proot --version no responde: ${VERSION}"; exit 1 ;; esac
+HELP="$(/out/proot --help 2>&1 || true)"
+echo "::notice::proot ${TAG} estático arm64; --help responde: $(echo "$HELP" | grep -ci proot) líneas con 'proot'"
+echo "$HELP" | grep -qi proot || { echo "::error::proot --help no responde"; exit 1; }
 echo "::notice::sha256 $(sha256sum /out/proot | cut -d' ' -f1)"
