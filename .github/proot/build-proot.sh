@@ -20,8 +20,9 @@ if readelf -d proot | grep -q NEEDED; then
 fi
 mkdir -p /out
 cp proot /out/proot
-# Prueba de humo: ptrace + exec dentro del mismo sistema.
-ARCH="$(/out/proot -r / /bin/uname -m)"
-echo "::notice::proot ${TAG} estático arm64; uname -m dentro de proot: ${ARCH}"
-[ "$ARCH" = "aarch64" ] || { echo "::error::uname distinto de aarch64: $ARCH"; exit 1; }
+# Prueba de humo: el binario arranca y responde. ptrace NO se prueba aquí: bajo emulación
+# qemu-user devuelve ENOSYS. ptrace se valida en un dispositivo Android real.
+VERSION="$(/out/proot --version 2>&1 | head -n 1 || true)"
+echo "::notice::proot ${TAG} estático arm64; versión: ${VERSION}"
+case "$VERSION" in *proot*) ;; *) echo "::error::proot --version no responde: ${VERSION}"; exit 1 ;; esac
 echo "::notice::sha256 $(sha256sum /out/proot | cut -d' ' -f1)"
