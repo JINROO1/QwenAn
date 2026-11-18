@@ -1,0 +1,33 @@
+name: android-download-check
+
+# Comprueba la descarga anónima de la release runtime-v1 con la lógica de la app:
+# manifest, fragmentos con reanudación HTTP Range, SHA-256 por fragmento y reensamblado.
+# No usa token: si falla aquí, la app tampoco podría descargar.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/e2e27cb5-qwenan]
+    paths:
+      - '.github/workflows/android-download-check.yml'
+      - '.github/download/**'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Descarga anónima y verificación
+        run: |
+          set -uo pipefail
+          OUT="$RUNNER_TEMP/runtime-v1"
+          RC=0
+          python3 .github/download/verify-release.py \
+            https://github.com/JINROO1/QwenAn/releases/download/runtime-v1 "$OUT" || RC=$?
+          if [ "$RC" -ne 0 ]; then
+            echo "::error::descarga anónima de runtime-v1 falló (rc=$RC)"
+            exit 1
+          fi
