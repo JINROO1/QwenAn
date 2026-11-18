@@ -62,11 +62,9 @@ jobs:
       - name: Create or update pre-release ${{ env.TAG }}
         run: |
           set -uo pipefail
-          cd assets
-          rm -f chunk.py
-          FILES=$(find . -maxdepth 1 -type f -printf '%f\n' | sort)
+          rm -f assets/chunk.py
+          FILES=$(find assets -maxdepth 1 -type f | sort)
           echo "::notice::archivos a publicar: $(echo "$FILES" | wc -l)"
-          gh --version | head -1
           if gh release view "$TAG" >/dev/null 2>&1; then
             MODE=upload; RC=0
             OUT=$(gh release upload "$TAG" $FILES --clobber 2>&1) || RC=$?
