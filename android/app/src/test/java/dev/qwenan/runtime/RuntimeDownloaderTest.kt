@@ -16,7 +16,7 @@ import java.nio.file.Files
 import kotlin.concurrent.thread
 
 /** Servidor HTTP/1.1 mínimo (el JDK de Android no trae com.sun.net.httpserver). */
-class MiniServer(private val handler: (method: String, range: String?) -> Reply) {
+class MiniServer(private val handler: (path: String, range: String?) -> Reply) {
     data class Reply(val status: Int, val headers: Map<String, String> = emptyMap(), val body: ByteArray = ByteArray(0))
 
     val ranges = mutableListOf<String?>()
@@ -43,7 +43,7 @@ class MiniServer(private val handler: (method: String, range: String?) -> Reply)
             if (line.startsWith("Range:", ignoreCase = true)) range = line.substringAfter(":").trim()
         }
         synchronized(ranges) { ranges += range }
-        val reply = handler(requestLine.substringBefore(' '), range)
+        val reply = handler(requestLine.split(" ").getOrElse(1) { "/" }, range)
         val out = s.getOutputStream()
         val head = StringBuilder("HTTP/1.1 ${reply.status} X\r\nContent-Length: ${reply.body.size}\r\nConnection: close\r\n")
         reply.headers.forEach { (k, v) -> head.append("$k: $v\r\n") }
