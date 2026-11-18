@@ -66,9 +66,12 @@ class RuntimeExtractorTest {
     }
 
     @Test
-    fun rejectsAbsolutePath() {
+    fun absolutePathStaysInsideDestination() {
+        // commons-compress quita la "/" inicial al leer la entrada; la ruta resultante queda dentro.
         val archive = makeArchive { tar -> tar.file("/etc/evil", "x".toByteArray(), 0x1a4) }
         val dest = Files.createTempDirectory("ext").toFile()
-        assertThrows(IOException::class.java) { RuntimeExtractor.extract(archive, dest) }
+        RuntimeExtractor.extract(archive, dest)
+        assertTrue(File(dest, "etc/evil").exists())
+        assertTrue(!File("/etc/evil").exists() || File("/etc/evil").lastModified() < System.currentTimeMillis() - 60_000)
     }
 }
