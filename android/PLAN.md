@@ -180,5 +180,5 @@ Siguientes pasos: cubrir el resto de bloques y pantallas de la Web Shell origina
 ## Estado de publicación (paso 3 completado)
 
 - Job `release` de `android-assets.yml` (manual): crea o actualiza el pre-release `runtime-v1` con los 7 archivos (manifest y fragmentos). Verificado en run `44225979023`: release creada.
-- Descarga anónima (`github.com/JINROO1/QwenAn/releases/download/runtime-v1/...`): 404 mientras el repo sea privado. Con repo privado, la app necesita un token de solo lectura limitado a este repo. Si el repo pasa a público, no hace falta token.
-- Decisión pendiente del usuario: visibilidad del repo.
+- Descarga anónima (`github.com/JINROO1/QwenAn/releases/download/runtime-v1/...`): 404 mientras el repo era privado; con el repo público responde 302.
+- Decisión del usuario: repo público. La descarga anónima de `runtime-v1` responde 302 (antes 404). La app no necesita token.
